@@ -1,0 +1,2 @@
+# sompy
+python utilities collection
