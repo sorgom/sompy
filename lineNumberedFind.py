@@ -7,14 +7,15 @@ class LineNumberedFind(object):
     def __init__(self):
         """initialize finder"""
         self.lookups = dict()
-        self.results = defaultdict(list)
+        self.results = defaultdict(dict)
+        self.newline_key = '__JUST_NEWLINE__'
 
     def add(self, key, pattern, flags=re.NOFLAG):
         """add a pattern to look for in the files"""
         # this is the 1st clou of the search:
-        # - 1st  match: the whole pattern wrapped in a group
-        # - last match: alternatively a newline
-        self.lookups[key] = re.compile(r'(' + pattern + r')|(\n)', flags)
+        # - 1st  match: the pattern itself
+        # - last match: alternatively just a newline (with match key)
+        self.lookups[key] = re.compile(rf'{pattern}|(?P<{self.newline_key}>\n)', flags)
         return self
 
     def sFile(self, fp:str):
@@ -23,18 +24,19 @@ class LineNumberedFind(object):
             cont = fh.read()
             fh.close()
             for key, rx in self.lookups.items():
+                res = []
                 lnr = 1
-                for all, *res, br in rx.findall(cont):
-                    # this is the 2nd clou of the search:
-                    # pattern or newline matched
-                    # - if pattern matched: 
-                    #   - store content found with file and line number
-                    #   - add the content number of newlines to the line numbers' counter
-                    if all:
-                        self.results[key].append([fp, lnr, all, *res])
-                        lnr += all.count('\n')
-                    # - otherwise just increase numbers' counter
-                    else: lnr += 1
+                for mo in rx.finditer(cont):
+                    # if capture was not just newline - store content found with file and line number
+                    if not mo.group(self.newline_key):
+                        # store file, line number, and the values found except the just newline
+                        *vals, _ = mo.groups('')
+                        res.append([lnr, *vals])
+                    # 2nd clou:
+                    # increase line counter by number of matched newlines
+                    lnr += mo[0].count('\n')
+                if res:
+                    self.results[key][fp] = res
 
     def sFiles(self, fps:list[str]):
         """search for the patterns in a list of files"""
@@ -42,28 +44,34 @@ class LineNumberedFind(object):
             self.sFile(fp)
 
 if __name__ == '__main__':
-    from os.path import dirname, join
+    # SAMPLE
+    # search for classes methods and functions in all .py files this directory and below
+
+    from os.path import dirname, join, relpath
     from glob import glob
-    lnf = LineNumberedFind()
     # simple class or method pattern
-    # $1: class name
-    # $2: method name
-    # $3: signature
-    # $4: docstring
-    lnf.add('CLASSES AND METHODS', r'^(?:class +(\w+)|    def +(\w+))([^\n]*)(?:\n +"""(.*?)""")?', re.M | re.S)
+    # class name, requires multiline matching
+    rCla = r'^class +(\w+)'
+    # method / function name, requires multiline matching
+    rDef = r'^( {4})?def +(\w+)'
+    # signature
+    rSig = r'(.*)'
+    # single line docstring
+    rDoc = r'\n +"""(.*)"""'
+
+    lnf = LineNumberedFind()
+    lnf.add('CLASSES, METHODS, FUNCTIONS', rf'(?:{rCla}|{rDef}){rSig}(?:{rDoc})?', re.MULTILINE)
     
-    # search for classes and methods in all .py files this directory and below
     mydir = dirname(__file__)
     files = glob(join(mydir, '*.py')) + glob(join(mydir, '*', '*.py'), recursive=True)
     lnf.sFiles(files)
 
-    for key, res in lnf.results.items():
+    for key, cont in lnf.results.items():
         print('=' * 6, key)
-        currfp = None
-        for fp, lnr, all, cla, met, sig, doc in res:
-            if currfp != fp:
-                print('FILE: ', fp)
-                currfp = fp
-            print(f'[{lnr:4d}] {doc}')
-            if cla: print('CLASS:', cla)
-            else: print(' ' * 6, f'{met}{re.sub(r':$', '', sig)}')
+        for fp, res in cont.items():
+            print(f'\n{relpath(fp, mydir)}:')
+            for lnr, cla, ind, met, sig, doc in res:
+                fl = f'{doc}\n{ind}{" " * 7}' if doc else ''
+                print(f'{ind}[{lnr:4d}] {fl}', end='')
+                if cla: print('CLASS:', cla)
+                else: print(f"{met}{re.sub(r':$', '', sig)}")

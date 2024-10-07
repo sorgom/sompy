@@ -2,6 +2,7 @@ from collections import defaultdict, Counter
 
 
 def addSome(d:defaultdict):
+    """add some values to the defaultdict"""
     d['a'].append(1)
     d['b'].append(2)
     d['a'].append(3)
