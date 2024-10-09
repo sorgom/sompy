@@ -3,3 +3,5 @@
 
 *.cmd eol=crlf
 *.bat eol=crlf
+
+*.afdesign binary

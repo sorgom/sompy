@@ -1,9 +1,8 @@
 import re
+import checkVersion
 from sys import version_info
 
-if version_info < (3, 12):
-    from os.path import basename
-    raise Exception(f'{basename(__file__)} requires Python 3.12 or higher')
+checkVersion.apply(3, 12, __file__)
 
 class LineNumberedFind(object):
     

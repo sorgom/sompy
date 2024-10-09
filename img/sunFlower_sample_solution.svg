@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 513 556" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-137.683,-1756.92)">
+<svg width="100%" height="100%" viewBox="0 0 124 134" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(0.24,0,0,0.24,-33.044,-421.66)">
         <g>
             <g transform="matrix(5.73109e-17,0.935959,-0.935959,5.73109e-17,469.436,1698.17)">
                 <path d="M359.5,215L417.957,248.75L417.957,316.25L359.5,350L301.043,316.25L301.043,248.75L359.5,215Z" style="fill:rgb(219,219,219);stroke:black;stroke-width:8.9px;"/>
@@ -61,63 +61,65 @@
                 <path d="M359.5,215L417.957,248.75L417.957,316.25L359.5,350L301.043,316.25L301.043,248.75L359.5,215Z" style="fill:white;stroke:black;stroke-width:8.9px;"/>
             </g>
         </g>
-        <g id="order" transform="matrix(0.242714,0,0,0.242714,107.421,1747.98)">
-            <g transform="matrix(3.85622,0,0,3.85622,-963.494,79.0583)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">1</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-963.494,529.903)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">1</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-581.177,755.325)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">3</text>
+        <g id="sample_solution" transform="matrix(0.242714,0,0,0.242714,107.421,1747.98)">
+            <g transform="matrix(3.85622,0,0,3.85622,-1096.27,502.112)">
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">-16</text>
             </g>
             <g transform="matrix(3.85622,0,0,3.85622,-1351.19,1204.43)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">3</text>
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">6</text>
             </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-581.177,1206.17)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">4</text>
+            <g transform="matrix(3.85622,0,0,3.85622,-1882.91,964.906)">
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">-12</text>
             </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-1743.96,980.345)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">4</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-581.177,304.48)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">2</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-970.656,980.747)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">2</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-970.656,1431.59)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">5</text>
+            <g transform="matrix(3.85622,0,0,3.85622,-1038.59,974.571)">
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">24</text>
             </g>
             <g transform="matrix(3.85622,0,0,3.85622,-1749.05,526.484)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">5</text>
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">6</text>
             </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-1348.57,1657.01)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">6</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-1350.52,753.649)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">6</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-1745.76,1431.59)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">7</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-2139.09,1206.17)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">8</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-2139.09,755.325)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">9</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-2224.15,302.805)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">10</text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-1804.75,79.0583)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">1<tspan x="674.313px " y="136px ">1</tspan></text>
-            </g>
-            <g transform="matrix(3.85622,0,0,3.85622,-1348.57,-146.364)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">0</text>
+            <g transform="matrix(3.85622,0,0,3.85622,-1433.89,744.386)">
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">15</text>
             </g>
             <g transform="matrix(3.85622,0,0,3.85622,-1348.57,302.805)">
-                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">0</text>
+                <text x="640px" y="136px" style="font-family:'ArialNarrow-Italic', 'Arial', sans-serif;font-style:italic;font-stretch:condensed;font-size:71.198px;fill:rgb(13,40,242);">7</text>
+            </g>
+        </g>
+        <g id="sample_outer" transform="matrix(0.242714,0,0,0.242714,107.421,1747.98)">
+            <g transform="matrix(3.85622,0,0,3.85622,-720.867,737.886)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">-15</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-581.177,1206.17)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">1</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-581.177,304.48)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">1</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-1050.94,1425.42)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">33</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-1484.26,1627.13)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">-24</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-1886.45,1415.89)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">-30</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-2234.81,1199.99)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">50</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-2278.04,736.798)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">-59</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-2224.15,302.805)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">20</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-1804.75,79.0583)">
+                <text x="637.358px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">35</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-1429.76,-144.276)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">15</text>
+            </g>
+            <g transform="matrix(3.85622,0,0,3.85622,-1100.36,63.8826)">
+                <text x="640px" y="136px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:71.198px;">-48</text>
             </g>
         </g>
     </g>

@@ -1,3 +1,12 @@
+"""
+Gimmik tool to solve the Sunflower puzzle.
+Uses itertools permutations to find all possible solutions.
+
+Sample data
+- outer values: 15 -48 1 -15 1 33 -24 -30 50 -59 20 35
+- choice values: 6 6 7 15 24 -12 -16
+"""
+
 import re
 from itertools import permutations
 
@@ -23,8 +32,9 @@ class SunFlower(object):
     def test(self, per:list):
         ok = True
         for pr, [fo, fi] in enumerate(self.rules):
-            if ok:
-                ok = self.subsum(self.outer, fo) + self.subsum(per, fi) == per[pr]
+            if self.subsum(self.outer, fo) + self.subsum(per, fi) != per[pr]:
+                ok = False
+                break
         if ok and per not in self.result:
             self.result.append(per)
     
@@ -41,20 +51,20 @@ class SunFlower(object):
             self.choice = self.get(7, 'choice')
         except KeyboardInterrupt:
             return False
+        return True
 
     def find(self):
         self.result = []
         if len(self.outer) != 12 or len(self.choice) != 7:
             return False
+        done = set()
         for p in permutations(self.choice):
-            self.test(list(p))
+            if not p in done:
+                done.add(p)
+                self.test(list(p))
         return True
 
 if __name__ == '__main__':
     sf = SunFlower()
     if sf.input() and sf.find():
-        print(sf.result)
-
-# sample data
-# outer values: 15 -48 1 -15 1 33 -24 -30 50 -59 20 35
-# choice values: 6 6 7 15 24 -12 -16
+        print(*sf.result)
