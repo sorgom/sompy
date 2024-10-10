@@ -1,6 +1,5 @@
 import re
 import checkVersion
-from sys import version_info
 
 checkVersion.apply(3, 12, __file__)
 
@@ -13,7 +12,7 @@ class LineNumberedFind(object):
         self.lookups = dict()
         self.results = dict()
         self.newline_key = '__JUST_NEWLINE__'
-        self.rxLe = re.compile(r' +$', re.M)
+        self.rxLe = re.compile(r'[ \t]+$', re.M)
         self.tabs = tabs
         self.clean = clean
 
@@ -74,7 +73,8 @@ if __name__ == '__main__':
     rFrm = r'from (.+?) +import (.*)'
     rMod = rf'^ *(?:{rImp}|{rFrm})'
     
-    lnf = LineNumberedFind(tabs=4).add('CMF', rCmf, re.M).add('MOD', rMod, re.M)
+    lnf = LineNumberedFind(tabs=4)
+    lnf.add('CMF', rCmf, re.M).add('MOD', rMod, re.M)
 
     mydir = dirname(__file__)
     files = glob(join(mydir, '*.py')) + glob(join(mydir, '**', '*.py'), recursive=True)
