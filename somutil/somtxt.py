@@ -28,8 +28,8 @@ def writeFile(fp, cont:str):
         fh.write(cont)
         fh.close()
 
-def commonLen(arr:list):
-    """find common begin length of list of iterables"""
+def commonLen(arr:list) -> int:
+    """find common beginnings' length of list of iterables"""
     if not arr: return 0
     res = len(arr[0])
     for n, e2 in enumerate(arr[1:]):
@@ -43,5 +43,8 @@ def commonLen(arr:list):
 
 if __name__ == '__main__':
     a = [(1, 2, 4, 3), (1, 2, 4, 4), (1, 2, 4, 5)]
+    print('a:', *a)
+    print('common length:', commonLen(a))
+    a = ('abcd', 'abcdd', 'abcde')
     print('a:', *a)
     print('common length:', commonLen(a))
