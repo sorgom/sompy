@@ -20,7 +20,7 @@ def fileTxt(fp) -> str:
 
 def cleanFileTxt(fp:str, tabs=None) -> str:
     """read file content, expand tabs, remove trailing spaces"""
-    return cleanTxt(fileTxt(fp), tabs)
+    return cleanTxt(fileTxt(fp), tabs=tabs)
 
 def writeFile(fp, cont:str):
     """write content to file"""
