@@ -1,11 +1,11 @@
 """
-creates som.py which extends system path to include the somutil directory
+creates sompy.py which extends system path to include the somutil directory
 
 Call this script from target folder.
 usage: this script [options]
 options:
 -h  this help
--c  create som.py
+-c  create sompy.py
 -n  <name> create <name>.py instead
 -f  force creation if file exists
 -p  preview file content
@@ -16,6 +16,7 @@ if __name__ == '__main__':
     from os import getcwd
     from os.path import dirname, relpath, join, exists
     import re
+    
     opts, args = docOpts(__doc__)
     
     if not (opts.get('c') or opts.get('p')):
@@ -24,11 +25,11 @@ if __name__ == '__main__':
     cwdPath = getcwd()
     myPath = dirname(__file__)
 
-    relPath = relpath(myPath, cwdPath).replace('\\', '/')
+    relPath = relpath(myPath, cwdPath)
 
     if relPath == '.': docHelp(__doc__)
 
-    name = re.sub(r'\.py$', '', opts.get('n', 'som')) + '.py'
+    name = re.sub(r'\.py$', '', opts.get('n', 'sompy')) + '.py'
     target = join(cwdPath, name)
 
     print('target :', target)
@@ -38,11 +39,11 @@ if __name__ == '__main__':
         print(f'file {name} exists')
         exit()
 
-    template = join(myPath, '..', 'templates', 'som.py')
+    template = join(myPath, '..', 'templates', 'sompy.py')
     with open(template, 'r') as fh:
         cont = fh.read()
         fh.close()
-    cont = cont.replace('<RELPATH>', relPath)
+    cont = cont.replace('<RELPATH>', relPath.replace('\\', '/'))
 
     if opts.get('p'):
         print(cont)

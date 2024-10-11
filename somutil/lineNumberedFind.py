@@ -47,9 +47,9 @@ class LineNumberedFind(dict):
                     else:
                         # store line number and values found (except the just newline)
                         *vals, _ = mo.groups('')
-                        res.append([lnr, *vals])
+                        res.append((lnr, *vals))
                         # line numbering (3):
-                        # add number of newlines in the match to the line count
+                        # add number of newlines of the whole match to the line count
                         lnr += mo[0].count('\n')
                 if res:
                     self[key][fp] = res
