@@ -46,7 +46,8 @@ class SunFlower(list[tuple]):
                 self._test(p)
         return True
 
-    def _subsum(self, src:tuple, sel:tuple) -> int:
+    @staticmethod
+    def _subsum(src:tuple, sel:tuple) -> int:
         return sum([src[i] for i in sel])
 
     def _test(self, per:tuple):
@@ -58,7 +59,8 @@ class SunFlower(list[tuple]):
         if ok and per not in self:
             self.append(per)
     
-    def _get(self, num, what) -> tuple:
+    @staticmethod
+    def _get(num, what) -> tuple:
         while True:
             c = input(f'{num:2d} {what} values: ')
             r = re.findall(r'-?\d+', c)

@@ -28,8 +28,8 @@ freq = list(frequencies.items())
 freq.sort()
 
 
-# plt.plot(*list(zip(*freq)))
-# plt.show()
+plt.plot(*list(zip(*freq)))
+plt.show()
 
 
 

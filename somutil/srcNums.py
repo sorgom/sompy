@@ -11,11 +11,15 @@ options:
 import re
 
 class SrcNums(object):
+    """line numbering class"""
+    
     def __init__(self, tabs:int=4):
+        """initialize with tab size"""
         self.rxLin = re.compile(r'^', re.M)
         self.tabs = tabs
 
     def num(self, src, num:int=0):
+        """number lines in source to stdout"""
         with open(src, 'r') as fh:
             txt = fh.read()
             fh.close()
@@ -23,11 +27,11 @@ class SrcNums(object):
             ln = len(str(nl))
             self.frm = f'%0{ln}d\t'
             self.nr = 0
-            txt = self.rxLin.sub(self.repl, txt).expandtabs(self.tabs)
+            txt = self.rxLin.sub(self._repl, txt).expandtabs(self.tabs)
             if num: print()
             print(txt)
 
-    def repl(self, *_):
+    def _repl(self, *_):
         self.nr += 1
         return self.frm % self.nr
     
