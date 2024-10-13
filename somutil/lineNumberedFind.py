@@ -1,19 +1,19 @@
-import re
-import checkVersion
-from sys import version_info
 
+"""Find patterns in files, return content found with line numbers"""
+
+import checkVersion
 checkVersion.apply(3, 12, __file__)
 
-class LineNumberedFind(object):
-    
+import re
+
+class LineNumberedFind(dict):
     """Finds patterns in files and returns content found with line numbers"""
     
     def __init__(self, tabs=None, clean=True):
         """initialize finder"""
         self.lookups = dict()
-        self.results = dict()
         self.newline_key = '__JUST_NEWLINE__'
-        self.rxLe = re.compile(r' +$', re.M)
+        self.rxLe = re.compile(r'[ \t]+$', re.M)
         self.tabs = tabs
         self.clean = clean
 
@@ -23,7 +23,7 @@ class LineNumberedFind(object):
         # - 1st  match: the pattern itself
         # - last match: alternatively just a newline (with match key)
         self.lookups[key] = re.compile(rf'{pattern}|(?P<{self.newline_key}>\n)', flags)
-        self.results[key] = dict()
+        self[key] = dict()
         return self
 
     def sFile(self, fp:str):
@@ -47,12 +47,12 @@ class LineNumberedFind(object):
                     else:
                         # store line number and values found (except the just newline)
                         *vals, _ = mo.groups('')
-                        res.append([lnr, *vals])
+                        res.append((lnr, *vals))
                         # line numbering (3):
-                        # add number of newlines in the match to the line count
+                        # add number of newlines of the whole match to the line count
                         lnr += mo[0].count('\n')
                 if res:
-                    self.results[key][fp] = res
+                    self[key][fp] = res
 
     def sFiles(self, fps:list[str]):
         """search for the patterns in a list of files"""
@@ -61,44 +61,47 @@ class LineNumberedFind(object):
 
 if __name__ == '__main__':
     # SAMPLE
-    # search for classes methods and functions in all .py files this directory and below
+    # search for classes, methods and functions with docstrings in python files
 
-    from os.path import dirname, join, relpath
+    from os.path import dirname
+    from os import chdir
     from glob import glob
     
-    # search classes, methods, functions, single line docstrings
-    rCmf = r'^( *)(class|def) +(\w+)(.*)(?:\n\s+"""(.*)""")?'
+    # docstring pattern (take first text line only)
+    rDox = r'"""\s*(.+?)(?:\n.*?)*?"""'
+    
+    # search file docstrings (1st line)
+    rDoc = rf'^(?:(?: *#.*)?\n)*\s*{rDox}'
+
+    # search classes, methods, functions with docstrings
+    rCmf = rf'( *)(class|def) +(\w+)(.+?)\n\s+{rDox}'
     
     # search imported modules
     rImp = r'import (.*)'
     rFrm = r'from (.+?) +import (.*)'
     rMod = rf'^ *(?:{rImp}|{rFrm})'
     
-    lnf = LineNumberedFind(tabs=4).add('CMF', rCmf, re.M).add('MOD', rMod, re.M)
+    lnf = LineNumberedFind(tabs=4)
+    lnf.add('DOC', rDoc).add('CMF', rCmf, re.M | re.S).add('MOD', rMod, re.M)
 
-    mydir = dirname(__file__)
-    files = glob(join(mydir, '*.py')) + glob(join(mydir, '**', '*.py'), recursive=True)
-    lnf.sFiles(files)
+    chdir(dirname(__file__))
+    lnf.sFiles(glob('*.py'))
 
-    def pOut(fp):
-        print(f'\n{relpath(fp, mydir).replace('\\', '/')}:')
+    fdocs = { fp: res[0][1] for fp, res in lnf['DOC'].items() }
 
-    print('====== classes, methods, functions')
-    pre = ' ' * 6
-    for fp, res in lnf.results['CMF'].items():
-        pOut(fp)
-        for lnr, ind, tp, nm, par, doc in res:
-            sig = re.sub(r':$', '', f'{tp} {nm}{par}')
-            print(f'[{lnr:4d}]{ind} ', end='')
-            if doc:
-                print('>', doc)
-                print(f'{pre} {ind}{sig}')
-            else:
-                print(sig)
-    print()
-    print('====== imported modules')
-    for fp, res in lnf.results['MOD'].items():
-        pOut(fp)
+    print('\n====== classes, methods, functions')
+    pre = ' ' * 7
+    for fp, res in lnf['CMF'].items():
+        print(f'\n{fp}')
+        dox = fdocs.get(fp)
+        if dox: print('>', dox)
+        for lnr, ind, tp, nm, par, dox in res:
+            print(f'[{lnr:4d}]{ind} {tp} {nm}{re.sub(r" *:$", "", par)}')
+            print(f'{pre}{ind}{dox}')
+
+    print('\n====== imported modules')
+    for fp, res in lnf['MOD'].items():
+        print(f'\n{fp}')
         for lnr, imp, frm, what in res:
             print(f'[{lnr:4d}] ', end='')
             if imp: print(imp)

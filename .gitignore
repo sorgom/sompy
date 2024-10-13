@@ -164,3 +164,4 @@ cython_debug/
 # pickle files
 *.pkl
 tmp.*
+*.html
