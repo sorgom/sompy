@@ -22,11 +22,11 @@ def docRep(doc:str):
     """replace "__file__" and "this script" in doc string"""
     rxRep = re.compile(r'\b(?:__file__|this ?script)\b', re.I)
     sub = basename(argv[0])
-    return rxRep.sub(sub, doc)
+    return rxRep.sub(sub, doc).strip()
 
 def docHelp(doc:str):
     """print doc string as help and exit"""
-    print(docRep(doc))
+    print(f'\n{docRep(doc)}\n')
     exit()
 
 def docOpts(doc:str, help=True) -> tuple[dict, list]:

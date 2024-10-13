@@ -6,8 +6,6 @@ options:
 -t  <size> tab size (default 4)
 -h  this help
 """
-#   created by Manfred Sorgo
-
 import re
 
 class SrcNums(object):
@@ -18,22 +16,18 @@ class SrcNums(object):
         self.rxLin = re.compile(r'^', re.M)
         self.tabs = tabs
 
-    def num(self, src, num:int=0):
-        """number lines in source to stdout"""
+    def num(self, src:str) -> str:
+        """number lines in source file"""
         with open(src, 'r') as fh:
             txt = fh.read()
             fh.close()
-            nl = txt.count('\n') + 1
-            ln = len(str(nl))
-            self.frm = f'%0{ln}d\t'
+            self.width = len(repr(txt.count('\n') + 1))
             self.nr = 0
-            txt = self.rxLin.sub(self._repl, txt).expandtabs(self.tabs)
-            if num: print()
-            print(txt)
+            return self.rxLin.sub(self._repl, txt).expandtabs(self.tabs)
 
     def _repl(self, *_):
         self.nr += 1
-        return self.frm % self.nr
+        return f'{repr(self.nr).rjust(self.width)}\t'
     
 if __name__ == '__main__':
     from docOpts import docOpts, docHelp
@@ -41,5 +35,4 @@ if __name__ == '__main__':
     if not args:
         docHelp(__doc__)
     srcNums = SrcNums(tabs=int(opts.get('t', 4)))
-    for num, src in enumerate(args):
-        srcNums.num(src, num)
+    print('\n'.join([srcNums.num(src) for src in args]))

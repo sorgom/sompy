@@ -21,7 +21,7 @@ def gitDiffFiles(repo:str, branch:str = None, ffunc=None) -> list:
     chdir(repo)
     files = []
     if not inRepo(): 
-        print('not in repository')
+        print('not in repository:', getcwd())
     else:
         # output is relative to repository
         repo = repoDir()
@@ -31,7 +31,7 @@ def gitDiffFiles(repo:str, branch:str = None, ffunc=None) -> list:
         # diff to other branch
         if branch is not None:
             addFiles(f'git diff --name-only {branch}')
-        # diff of modified files
+        # modified files
         addFiles('git diff --name-only')
         # new files
         addFiles('git ls-files --others --exclude-standard')

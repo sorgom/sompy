@@ -40,6 +40,7 @@ def dox(dir:str, tabs:None, imp=False):
     print('directory:', getcwd())
     lnf.sFiles(glob('*.py') + glob('**/*.py', recursive=True))
 
+    # files with file docstring
     fdocs = { fp: res[0][1] for fp, res in lnf['DOC'].items() }
 
     print('\n====== documented classes, methods, functions')
