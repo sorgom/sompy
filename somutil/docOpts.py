@@ -29,7 +29,7 @@ def docHelp(doc:str):
     print(f'\n{docRep(doc)}\n')
     exit()
 
-def docOpts(doc:str, help=True) -> tuple[dict, list]:
+def docOpts(doc:str, help=True, reqArgs=False) -> tuple[dict, list]:
     """parse options from doc string and command line"""
     rxOpt = re.compile(r'^ *-([a-zA-Z])( +<.+?>)?', re.M)
     res = {}
@@ -46,6 +46,8 @@ def docOpts(doc:str, help=True) -> tuple[dict, list]:
         opts, args = getopt(argv[1:], ostr)
     except Exception:
         docHelp(doc)
+    if reqArgs and not args:
+        docHelp(doc)    
     for o, v in opts:
         key = o[1]
         if help and key == 'h':

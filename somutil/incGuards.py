@@ -4,19 +4,21 @@ from cleanTxt import cleanTxt
 from os.path import basename, isfile, isdir, dirname
 from glob import glob
 import re
-rxOnce = re.compile(r'(^ *#pragma +once\n)\n*', re.M)
+rxOnce = re.compile(r'(^ *#pragma +once\n)\r?\n*', re.M)
 rxHead = re.compile(r'^((?:\s|//.*\n)*)')
-rxGuard = re.compile(r'^(#ifndef +(\w+_H)\n#define +\2\n)', re.M)
+rxGuard = re.compile(r'^(#ifndef +(\w+_H)\r?\n#define +\2\n)', re.M)
 rxHeader = re.compile(r'\.h(?:pp)?$')
+rxIcap = re.compile(r'([a-z])([A-Z])')
 
-def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False):
+def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False, icaps=False):
     """add include guard to header file"""
 
     with open(fp, 'r') as fh:
         nm = basename(fp)
         if not rxHeader.search(nm): return
-        if sub: nm = f'{basename(dirname(fp))}_{nm}'
-        gs = re.sub(r'[^A-Z]', '_', nm.upper())
+        gs = rxIcap.sub(r'\1_\2', nm) if icaps else nm
+        if sub: gs = f'{basename(dirname(fp))}_{gs}'
+        gs = re.sub(r'[^A-Z]', '_', gs.upper())
         guard = f'#ifndef {gs}\n#define {gs}\n'
         cont = cleanTxt(fh.read(), tabs=tabs)
         fh.close()
@@ -36,9 +38,10 @@ def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False):
             cont = rxOnce.sub(rf'\1{guard}\n', cont, count=1)
         else:
             cont = rxHead.sub(rf'\1{guard}\n', cont, count=1)
+        cont = re.sub(r'\s+$', '', cont)
         if add:
-            cont = re.sub(r'\s+$', '', cont)
-            cont += '\n#endif // _H\n'
+            cont += '\n#endif // _H'
+        cont += '\n'
         if old == cont: return
         if preview:
             print(cont)
@@ -65,6 +68,7 @@ options:
 -t  <size> tab size (default 4)
 -s  use subfolder in guard
 -c  correct guard if mismatch
+-i  insert underscore at intercaps
 -p  preview only
 -h  this help
 """
@@ -75,5 +79,6 @@ options:
                  tabs=int(opts.get('t', 4)), 
                  preview=opts.get('p'), 
                  correct=opts.get('c'),
-                 sub=opts.get('s')
+                 sub=opts.get('s'),
+                 icaps=opts.get('i')
                  )
