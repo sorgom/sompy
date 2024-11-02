@@ -15,12 +15,12 @@ def repoDir() -> str:
 def repoFiles(dir:str = ''):
     return procOutList(f'git ls-files {dir}')
 
-def gitDiffFiles(repo:str, branch:str = None, ffunc=None) -> list:
+def gitDiffFiles(repo:str, branch:str = None, ffunc=None):
     """existing changed or new files in repository"""
     calldir = getcwd()
     chdir(repo)
     files = []
-    if not inRepo(): 
+    if not inRepo():
         print('not in repository:', getcwd())
     else:
         # output is relative to repository
@@ -37,9 +37,10 @@ def gitDiffFiles(repo:str, branch:str = None, ffunc=None) -> list:
         addFiles('git ls-files --others --exclude-standard')
         # unique
         s = set(files)
-        files = [ normpath(join(repo, f)) for f in s if exists(f) and (ffunc is None or ffunc(f)) ]
+        for f in s:
+            if exists(f) and (ffunc is None or ffunc(f)):
+                yield normpath(join(repo, f))
     chdir(calldir)
-    return files
 
 if __name__ == '__main__':
     help = """
@@ -50,13 +51,15 @@ options:
 -h  this help
 """
     from docOpts import docOpts
+    from globify import globify
     from os.path import dirname
 
     opts, args = docOpts(help)
     branch = opts.get('b')
     args = args or [dirname(__file__)]
-    for repo in args:
+    for repo in globify(args):
         print('repo:', repo)
         for fn in gitDiffFiles(repo, branch=branch):
             print(fn)
         print()
+

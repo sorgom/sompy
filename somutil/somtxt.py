@@ -28,6 +28,9 @@ def writeFile(fp, cont:str):
         fh.write(cont)
         fh.close()
 
+def mdCode(cont:str):
+    return '\n'.join(['```', cont, '```'])
+
 def commonLen(arr:list) -> int:
     """find common beginnings' length of list of iterables"""
     if not arr: return 0
@@ -48,3 +51,4 @@ if __name__ == '__main__':
     a = ('abcd', 'abcdd', 'abcde')
     print('a:', *a)
     print('common length:', commonLen(a))
+
