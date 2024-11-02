@@ -33,4 +33,3 @@ options:
     opts, args = docOpts(help, reqArgs=True)
     for arg in globify(args):
         cleanMdj(arg)
-
