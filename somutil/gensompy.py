@@ -1,7 +1,8 @@
 """
 creates sompy.py which extends system path to include the somutil directory
 
-Call this script from target folder.
+call this script from your target folder
+
 usage: this script [options]
 options:
 -h  this help

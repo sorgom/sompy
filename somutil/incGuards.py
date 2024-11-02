@@ -18,7 +18,7 @@ def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False, icap
         if not rxHeader.search(nm): return
         gs = rxIcap.sub(r'\1_\2', nm) if icaps else nm
         if sub: gs = f'{basename(dirname(fp))}_{gs}'
-        gs = re.sub(r'[^A-Z]', '_', gs.upper())
+        gs = re.sub(r'[^A-Z0-9]', '_', gs.upper())
         guard = f'#ifndef {gs}\n#define {gs}\n'
         cont = cleanTxt(fh.read(), tabs=tabs)
         fh.close()
