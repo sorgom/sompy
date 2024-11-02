@@ -5,7 +5,6 @@
 #   created by Manfred Sorgo
 
 import re
-from os.path import basename, exists
 from subprocess import Popen, DEVNULL, PIPE
 from os import name as oname
 from sys import exit
@@ -21,15 +20,6 @@ def procOut(call, codex='ascii') -> str:
 def procOutList(call, codex='ascii'):
     """run process and return stdout as list"""
     return procOut(call, codex).split('\n')
-
-def repoDir():
-    return procOut('git rev-parse --show-toplevel')
-
-def repoFiles(dir:str = ''):
-    return procOutList(f'git ls-files {dir}')
-
-def mdCode(cont:str):
-    return '\n'.join(['```', cont, '```'])
 
 def checkLinux():
     if oname != 'posix':

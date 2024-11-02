@@ -7,7 +7,7 @@ rxEnd = re.compile(r'\s*$')
 def cleanTxt(txt:str, tabs=None) -> str:
     """expand tabs and remove trailing spaces"""
     if tabs: txt = txt.expandtabs(tabs)
-    return rxEnd.sub('\n', rxLin.sub('', txt))
+    return rxEnd.sub('', rxLin.sub('', txt)) + '\n'
 
 def cleanFile(fp:str, tabs=None):
     """clean file content"""
@@ -19,16 +19,16 @@ def cleanFile(fp:str, tabs=None):
             fh.close()
 
 if __name__ == '__main__':
-    from docOpts import docOpts, docHelp
+    from docOpts import docOpts
+    from globify import globify
+
     help = __doc__ + """
 usage: this script [options] files
 options:
 -t  <size> tab size (default 4)
 -h  this help
 """
-    opts, args = docOpts(help)
-    if not args:
-        docHelp(help)
-    for fp in args:
-        cleanFile(fp, tabs=int(opts.get('t', 4)))
-                  
+    opts, args = docOpts(help, reqArgs=True)
+    tabs = int(opts.get('t', 4))
+    for arg in globify(args):
+        cleanFile(arg, tabs=tabs)

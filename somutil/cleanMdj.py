@@ -22,14 +22,14 @@ def cleanMdj(*fps):
                 fh.close()
 
 if __name__ == '__main__':
-    from docOpts import docOpts, docHelp
+    from docOpts import docOpts
+    from globify import globify
+
     help = __doc__ + """
 usage: this script [options] *.mdj
 options:
 -h  this help
 """
-    opts, args = docOpts(help)
-    if not args:
-        docHelp(help)
-    cleanMdj(*args)
-
+    opts, args = docOpts(help, reqArgs=True)
+    for arg in globify(args):
+        cleanMdj(arg)
