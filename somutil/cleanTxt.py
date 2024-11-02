@@ -7,7 +7,7 @@ rxEnd = re.compile(r'\s*$')
 def cleanTxt(txt:str, tabs=None) -> str:
     """expand tabs and remove trailing spaces"""
     if tabs: txt = txt.expandtabs(tabs)
-    return rxEnd.sub('', rxLin.sub('', txt)) + '\n'
+    return rxEnd.sub('\n', rxLin.sub('', txt))
 
 def cleanFile(fp:str, tabs=None):
     """clean file content"""
