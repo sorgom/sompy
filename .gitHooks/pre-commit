@@ -39,9 +39,12 @@ for file in $(git diff-index --cached --name-only HEAD); do
   fi
 done
 
-
+if [[ -n $svgs ]]; then
+  echo cleaning svg files
+  $py $sompy/cleanSvg.py $svgs
+fi
 if [[ -n $txts ]]; then
   echo cleaning text files
-  $py $sompy/cleanTxt.py $txts
+  $py $sompy/cleanTxt.py -l $txts
 fi
-for file in $txts; do git add $file; done
+for file in $svgs $txts; do git add $file; done
