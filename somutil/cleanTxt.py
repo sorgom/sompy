@@ -10,13 +10,14 @@ def cleanTxt(txt:str, tabs=None, lf=False) -> str:
     if lf: txt = txt.replace('\r\n', '\n').replace('\r', '\n')
     return rxEnd.sub('', rxLin.sub('', txt)) + '\n'
 
-def cleanFile(fp:str, tabs=None, lf=False):
+def cleanFile(fp:str, lf=False, **kw):
     """clean file content"""
     with open(fp, 'r') as fh:
         cont = fh.read()
         fh.close()
-        with open(fp, 'w') as fh:
-            fh.write(cleanTxt(cont, tabs=tabs, lf=lf))
+        wopts = { 'newline': '\n' } if lf else {}
+        with open(fp, 'w', **wopts) as fh:
+            fh.write(cleanTxt(cont, lf=lf, **kw))
             fh.close()
 
 if __name__ == '__main__':

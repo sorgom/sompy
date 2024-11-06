@@ -25,7 +25,7 @@ print(cnt2 == cnt1)
 
 lc = range(10)
 print(lc)
-print('items:', cnt1.items())       
+print('items:', cnt1.items())
 
 cnt1.clear()
 cnt1.update(lc)

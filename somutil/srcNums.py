@@ -30,9 +30,7 @@ class SrcNums(object):
         return f'{repr(self.nr).rjust(self.width)}\t'
     
 if __name__ == '__main__':
-    from docOpts import docOpts, docHelp
-    opts, args = docOpts(__doc__)
-    if not args:
-        docHelp(__doc__)
+    from docOpts import docOpts
+    opts, args = docOpts(__doc__, reqArgs=True)
     srcNums = SrcNums(tabs=int(opts.get('t', 4)))
-    print('\n'.join([srcNums.num(src) for src in args]))
+    print([srcNums.num(src) for src in args], sep='\n')
