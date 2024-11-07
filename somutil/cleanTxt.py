@@ -17,7 +17,8 @@ def cleanFile(fp:str, lf=False, **kw):
         fh.close()
         wopts = { 'newline': '\n' } if lf else {}
         with open(fp, 'w', **wopts) as fh:
-            fh.write(cleanTxt(cont, lf=lf, **kw))
+            # eol correction is done by open mode
+            fh.write(cleanTxt(cont, lf=False, **kw))
             fh.close()
 
 if __name__ == '__main__':
