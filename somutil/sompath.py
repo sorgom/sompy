@@ -12,22 +12,22 @@ options:
 """
 
 if __name__ == '__main__':
-    from docOpts import docOpts, docHelp
+    from docopts import docopts, dochelp
     from os import getcwd
     from os.path import dirname, relpath, join, exists
     import re
-    
-    opts, args = docOpts(__doc__)
-    
+
+    opts, args = docopts(__doc__)
+
     if not (opts.get('c') or opts.get('p')):
-        docHelp(__doc__)
+        dochelp(__doc__)
 
     cwdPath = getcwd()
     myPath = dirname(__file__)
 
     relPath = relpath(myPath, cwdPath)
 
-    if relPath == '.': docHelp(__doc__)
+    if relPath == '.': dochelp(__doc__)
 
     name = re.sub(r'\.py$', '', opts.get('n', 'sompy')) + '.py'
     target = join(cwdPath, name)

@@ -10,7 +10,7 @@ import re
 
 class SrcNums(object):
     """line numbering class"""
-    
+
     def __init__(self, tabs:int=4):
         """initialize with tab size"""
         self.rxLin = re.compile(r'^', re.M)
@@ -28,9 +28,9 @@ class SrcNums(object):
     def _repl(self, *_):
         self.nr += 1
         return f'{repr(self.nr).rjust(self.width)}\t'
-    
+
 if __name__ == '__main__':
-    from docOpts import docOpts
-    opts, args = docOpts(__doc__, reqArgs=True)
+    from docopts import docopts
+    opts, args = docopts(__doc__, reqArgs=True)
     srcNums = SrcNums(tabs=int(opts.get('t', 4)))
     print([srcNums.num(src) for src in args], sep='\n')

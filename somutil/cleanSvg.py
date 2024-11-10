@@ -22,13 +22,13 @@ def cleanSvg(*fps):
                 fh.close()
 
 if __name__ == '__main__':
-    from docOpts import docOpts
-    from globify import globify
+    from docopts import docopts
+    from fglob import fglob
     help = __doc__ + """
 usage: this script [options] *.svg
 options:
 -h  this help
 """
-    opts, args = docOpts(help, reqArgs=True)
-    for arg in globify(args):
+    opts, args = docopts(help, reqArgs=True)
+    for arg in fglob(args):
         cleanSvg(arg)

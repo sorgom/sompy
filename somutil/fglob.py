@@ -3,7 +3,7 @@
 from glob import glob
 from os import name as os_name
 
-def globify(args):
+def fglob(args):
     """file globbing for windows CLI"""
     if (os_name == 'posix'):
         for arg in args: yield arg
@@ -13,5 +13,5 @@ def globify(args):
 
 if __name__ == '__main__':
     from sys import argv
-    for arg in globify(argv[1:]):
+    for arg in fglob(argv[1:]):
         print(arg)

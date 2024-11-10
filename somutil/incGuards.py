@@ -50,7 +50,7 @@ def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False, icap
                 print(f'-> {fp}')
                 fh.write(cont)
                 fh.close()
-    
+
 def addIncGuards(args:list, **kws):
     """add include guards to header files"""
     for arg in args:
@@ -61,7 +61,7 @@ def addIncGuards(args:list, **kws):
                 addIncGuard(fp, **kws)
 
 if __name__ == '__main__':
-    from docOpts import docOpts, docHelp
+    from docopts import docopts, dochelp
     help = __doc__ + """
 usage: this script [options] files / dirs
 options:
@@ -72,12 +72,12 @@ options:
 -p  preview only
 -h  this help
 """
-    opts, args = docOpts(help)
+    opts, args = docopts(help)
     if not args:
-        docHelp(help)
-    addIncGuards(args, 
-                 tabs=int(opts.get('t', 4)), 
-                 preview=opts.get('p'), 
+        dochelp(help)
+    addIncGuards(args,
+                 tabs=int(opts.get('t', 4)),
+                 preview=opts.get('p'),
                  correct=opts.get('c'),
                  sub=opts.get('s'),
                  icaps=opts.get('i')

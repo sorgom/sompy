@@ -50,14 +50,14 @@ options:
 -b  <branch> add diff to branch
 -h  this help
 """
-    from docOpts import docOpts
-    from globify import globify
+    from docopts import docopts
+    from fglob import fglob
     from os.path import dirname
 
-    opts, args = docOpts(help)
+    opts, args = docopts(help)
     branch = opts.get('b')
     args = args or [dirname(__file__)]
-    for repo in globify(args):
+    for repo in fglob(args):
         print('repo:', repo)
         for fn in gitDiffFiles(repo, branch=branch):
             print(fn)
