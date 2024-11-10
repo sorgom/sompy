@@ -1,1 +1,1 @@
-__all__ = ['checkVersion', 'lineNumberedFind', 'docOpts']
+__all__ = ['checkVersion', 'lineNumberedFind', 'docopts']

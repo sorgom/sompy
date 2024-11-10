@@ -17,12 +17,13 @@ def cleanFile(fp:str, lf=False, **kw):
         fh.close()
         wopts = { 'newline': '\n' } if lf else {}
         with open(fp, 'w', **wopts) as fh:
-            fh.write(cleanTxt(cont, lf=lf, **kw))
+            # eol correction is done by open mode
+            fh.write(cleanTxt(cont, lf=False, **kw))
             fh.close()
 
 if __name__ == '__main__':
-    from docOpts import docOpts
-    from globify import globify
+    from docopts import docopts
+    from fglob import fglob
 
     help = __doc__ + """
 usage: this script [options] files
@@ -31,8 +32,8 @@ options:
 -l  convert line endings to unix style
 -h  this help
 """
-    opts, args = docOpts(help, reqArgs=True)
+    opts, args = docopts(help, reqArgs=True)
     tabs = int(opts.get('t', 4))
     lf = opts.get('l', False)
-    for arg in globify(args):
+    for arg in fglob(args):
         cleanFile(arg, tabs=tabs, lf=lf)

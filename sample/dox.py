@@ -64,8 +64,8 @@ def dox(dir:str, tabs:None, imp=False):
                     print(f'{pre}{ind}> {dox}')
 
 if __name__ == '__main__':
-    from docOpts import docOpts
-    opts, args = docOpts(__doc__)
+    from docopts import docopts
+    opts, args = docopts(__doc__)
     if args: dir = args[0]
     else:
         from os.path import dirname, abspath, join
