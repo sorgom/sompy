@@ -30,7 +30,7 @@ def dochelp(doc:str, ret:int=0):
     print(f'\n{docrep(doc)}\n')
     exit(ret)
 
-def docopts(doc:str, args:list=argv[1:], help=True, reqArgs=False) -> tuple[dict, list]:
+def docopts(doc:str, args:list=argv[1:], help=True, reqArgs=False, all=False) -> tuple[dict, list]:
     """parse options from doc string and command line"""
     rxOpt = re.compile(r'^ *-([a-zA-Z])( +<.+?>)?', re.M)
     res = {}
@@ -60,18 +60,20 @@ def docopts(doc:str, args:list=argv[1:], help=True, reqArgs=False) -> tuple[dict
         if help and key == 'h':
             dochelp(doc)
         res[key] = v if isVal.get(key) else True
-    for key in keys:
-        if key not in res:
-            res[key] = None if isVal.get(key) else False 
+
+    if all:
+        for key in keys:
+            if key not in res:
+                res[key] = None if isVal.get(key) else False
 
     return res, args
 
 if __name__ == '__main__':
     def docshell():
         if len(argv) < 2: return
-        txt, *args = argv[1:]
+        txt = argv[1]
         with open(txt) as f:
-            opts, args = docopts(f.read(), args, help=False)
+            opts, args = docopts(f.read(), args=argv[2:], help=False, all=True)
 
         cfunc = lambda c: c
         cTrue = 'true'
