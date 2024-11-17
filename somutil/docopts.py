@@ -14,10 +14,13 @@ replaces "__file__" and "this script" with script name
 # author SOM, Manfred Sorgo
 
 from getopt import getopt
-from sys import argv
+from sys import argv, stderr
 from os.path import basename
 from os import name as osname
 import re
+
+def toErr(*args):
+    print(*args, file=stderr)
 
 def docrep(doc:str):
     """replace "__file__" and "this script" in doc string"""
@@ -40,7 +43,7 @@ def docopts(doc:str, args:list=argv[1:], help=True, reqArgs=False, all=False) ->
     for mo in rxOpt.finditer(doc):
         key = mo.group(1)
         if key in keys:
-            print(f'duplicate option -{key}')
+            toErr(f'duplicate option -{key}')
             exit(1)
         keys.add(key)
         ostr += key
@@ -51,7 +54,7 @@ def docopts(doc:str, args:list=argv[1:], help=True, reqArgs=False, all=False) ->
     try:
         opts, args = getopt(args, ostr)
     except Exception as e:
-        print(e)
+        toErr(e)
         exit(1)
     if reqArgs and not args:
         dochelp(doc)
