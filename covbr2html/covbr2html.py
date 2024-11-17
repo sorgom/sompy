@@ -49,6 +49,8 @@ class Covbr2html(object):
         self.rxDouble = re.compile(rf'^(?:{rFile}\n)*({rFile})', re.M)
         #   single file with emphasis end tag
         self.rxFileEm = re.compile(rf'^{rFile}</em>', re.M)
+        #   clean tailing emphasis
+        self.rxTailEm = re.compile(rf'</em>\s*$')
 
         self.rxTail = re.compile(rf'(?:{rFile})?\s*$')
         self.rx_ok = re.compile(r'^( *)(X|TF|tf)(?:$| (.*))', re.M)
@@ -113,7 +115,7 @@ class Covbr2html(object):
             # create html
             newc = escape(newc)
             if self.fc:
-                newc = self.rxFileEm.sub(r'<em>\g<0>', self.rxFiles.sub(r'\g<0></em>', newc))
+                newc = self.rxFileEm.sub(r'<em>\g<0>', self.rxTailEm.sub('', self.rxFiles.sub(r'\g<0></em>', newc)))
                 if self.hc: newc = self.rxFiles.sub(r'<i>\g<0></i>', newc)
             else:
                 newc = self.rxFile.sub(r'<em>\g<0></em>', newc)
