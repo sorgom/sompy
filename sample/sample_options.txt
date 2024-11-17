@@ -1,0 +1,7 @@
+options:
+-c  clean build and report folders
+-o  <folder> output to folder
+-i  <file> input from file
+-H  generate HTML
+-l  list targets
+-h  this help
