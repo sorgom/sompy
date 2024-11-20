@@ -61,7 +61,7 @@ def addIncGuards(args:list, **kws):
                 addIncGuard(fp, **kws)
 
 if __name__ == '__main__':
-    from docopts import docopts, dochelp
+    from docopts import docopts
     help = __doc__ + """
 usage: this script [options] files / dirs
 options:
@@ -72,9 +72,7 @@ options:
 -p  preview only
 -h  this help
 """
-    opts, args = docopts(help)
-    if not args:
-        dochelp(help)
+    opts, args = docopts(help, reqArgs=True)
     addIncGuards(args,
                  tabs=int(opts.get('t', 4)),
                  preview=opts.get('p'),

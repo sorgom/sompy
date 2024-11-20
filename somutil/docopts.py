@@ -73,6 +73,7 @@ def docopts(doc:str, args:list=argv[1:], help=True, reqArgs=False, all=False) ->
 
 if __name__ == '__main__':
     def docshell():
+        """docopts to shell"""
         if len(argv) < 2: return
         txt = argv[1]
         with open(txt) as f:
