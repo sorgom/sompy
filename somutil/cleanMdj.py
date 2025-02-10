@@ -9,15 +9,16 @@
 import re
 from sys import argv
 
-def cleanMdj(*fps):
+def cleanMdj(*fps, lf=False):
     """put line breaks into mdj files"""
     rxOpen  = re.compile(r'([\[\{}])\n?')
     rxClose = re.compile(r'\n?([\]\}])')
+    wopts = { 'newline': '\n' } if lf else {}
     for fp in fps:
         with open(fp, 'r') as fh:
             txt = fh.read()
             fh.close()
-            with open(fp, 'w') as fh:
+            with open(fp, 'w', **wopts) as fh:
                 fh.write(rxClose.sub(r'\n\1', rxOpen.sub(r'\1\n', txt)))
                 fh.close()
 
@@ -28,8 +29,10 @@ if __name__ == '__main__':
     help = __doc__ + """
 usage: this script [options] *.mdj
 options:
+-l  convert line endings to unix style
 -h  this help
 """
     opts, args = docopts(help, reqArgs=True)
+    lf = opts.get('l', False)
     for arg in fglob(args):
-        cleanMdj(arg)
+        cleanMdj(arg, lf=lf)
