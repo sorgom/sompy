@@ -7,17 +7,18 @@ from somtxt import fileTxt, writeFile
 import re
 from sys import argv
 
-def cleanSvg(*fps):
+def cleanSvg(*fps, lf=False):
     """put line breaks behind svg file tags"""
     rxClean = re.compile(r'<text.*?>UNREGISTERED</text>')
     rxTags  = re.compile(r'(<[^>]*>)\n?')
     rxEnd   = re.compile(r'[ \t]+$', re.M)
     rxLine  = re.compile(r'^\n', re.M)
+    wopts = { 'newline': '\n' } if lf else {}
     for fp in fps:
         with open(fp, 'r') as fh:
             txt = fh.read()
             fh.close()
-            with open(fp, 'w') as fh:
+            with open(fp, 'w', **wopts) as fh:
                 fh.write(rxLine.sub('', rxEnd.sub('', rxTags.sub(r'\1\n', rxClean.sub('', txt)))))
                 fh.close()
 
@@ -27,8 +28,10 @@ if __name__ == '__main__':
     help = __doc__ + """
 usage: this script [options] *.svg
 options:
+-l  convert line endings to unix style
 -h  this help
 """
     opts, args = docopts(help, reqArgs=True)
+    lf = opts.get('l', False)
     for arg in fglob(args):
-        cleanSvg(arg)
+        cleanSvg(arg, lf=lf)

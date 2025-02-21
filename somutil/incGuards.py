@@ -10,7 +10,7 @@ rxGuard = re.compile(r'^(#ifndef +(\w+_H)\r?\n#define +\2\n)', re.M)
 rxHeader = re.compile(r'\.h(?:pp)?$')
 rxIcap = re.compile(r'([a-z])([A-Z])')
 
-def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False, icaps=False):
+def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False, icaps=False, rmonce=False):
     """add include guard to header file"""
 
     with open(fp, 'r') as fh:
@@ -38,6 +38,10 @@ def addIncGuard(fp:str, tabs=None, preview=False, correct=False, sub=False, icap
             cont = rxOnce.sub(rf'\1{guard}\n', cont, count=1)
         else:
             cont = rxHead.sub(rf'\1{guard}\n', cont, count=1)
+
+        if correct and rmonce:
+            cont = rxOnce.sub('', cont)
+
         cont = re.sub(r'\s+$', '', cont)
         if add:
             cont += '\n#endif // _H'
@@ -62,6 +66,7 @@ def addIncGuards(args:list, **kws):
 
 if __name__ == '__main__':
     from docopts import docopts
+    from fglob import fglob
     help = __doc__ + """
 usage: this script [options] files / dirs
 options:
@@ -69,14 +74,16 @@ options:
 -s  use subfolder in guard
 -c  correct guard if mismatch
 -i  insert underscore at intercaps
+-r  remove #pragma once
 -p  preview only
 -h  this help
 """
     opts, args = docopts(help, reqArgs=True)
-    addIncGuards(args,
-                 tabs=int(opts.get('t', 4)),
-                 preview=opts.get('p'),
-                 correct=opts.get('c'),
-                 sub=opts.get('s'),
-                 icaps=opts.get('i')
-                 )
+    addIncGuards(list(fglob(args)),
+                tabs=int(opts.get('t', 4)),
+                preview=opts.get('p'),
+                correct=opts.get('c'),
+                sub=opts.get('s'),
+                icaps=opts.get('i'),
+                rmonce=opts.get('r')
+    )

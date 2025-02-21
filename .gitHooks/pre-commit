@@ -35,7 +35,7 @@ done
 
 if [[ -n $svgs ]]; then
   echo cleaning svg files
-  $py $sompy/cleanSvg.py $svgs
+  $py $sompy/cleanSvg.py -l $svgs
 fi
 if [[ -n $txts ]]; then
   echo cleaning text files
