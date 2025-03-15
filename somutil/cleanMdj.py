@@ -11,14 +11,15 @@ from sys import argv
 
 def cleanMdj(*fps):
     """put line breaks into mdj files"""
-    rxOpen  = re.compile(r'([\[\{}])\n?')
-    rxClose = re.compile(r'\n?([\]\}])')
+    rxOpen  = re.compile(r'([\[\{])\n?')
+    rxClose = re.compile(r'\n?([\]\}],?)')
+    rxLine = re.compile(r'^\s+', re.M)
     for fp in fps:
         with open(fp, 'r') as fh:
             txt = fh.read()
             fh.close()
-            with open(fp, 'w') as fh:
-                fh.write(rxClose.sub(r'\n\1', rxOpen.sub(r'\1\n', txt)))
+            with open(fp, 'w', newline = '\n') as fh:
+                fh.write(rxLine.sub('', rxClose.sub(r'\n\1', rxOpen.sub(r'\1\n', txt))))
                 fh.close()
 
 if __name__ == '__main__':
