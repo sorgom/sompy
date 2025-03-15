@@ -12,7 +12,7 @@ def cleanSvg(*fps, lf=False):
     rxClean = re.compile(r'<text.*?>UNREGISTERED</text>')
     rxTags  = re.compile(r'(<[^>]*>)\n?')
     rxEnd   = re.compile(r'[ \t]+$', re.M)
-    rxLine  = re.compile(r'^\n', re.M)
+    rxLine  = re.compile(r'^\s+', re.M)
     wopts = { 'newline': '\n' } if lf else {}
     for fp in fps:
         with open(fp, 'r') as fh:
