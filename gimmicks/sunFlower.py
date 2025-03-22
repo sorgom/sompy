@@ -58,7 +58,7 @@ class SunFlower(list[tuple]):
                 break
         if ok and per not in self:
             self.append(per)
-    
+
     @staticmethod
     def _get(num, what) -> tuple:
         while True:

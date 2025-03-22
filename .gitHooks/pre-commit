@@ -1,10 +1,10 @@
 #!/usr/bin/bash
 # use: git config core.hooksPath .gitHooks
 
-# availabilty of python
+# availability of python
 py=$(which py || which python || which python3)
 if [[ -z $py ]]
-then 
+then
   echo "No python found"
   exit 0
 fi
@@ -15,30 +15,21 @@ cd $(git rev-parse --show-toplevel)
 # path to sompy python scripts
 sompy=$(pwd)/somutil
 
-svgs=
-# files regarded as text files to be cleaned
-txts=
-# extensions of text files sorted by likeliness
-xtxt="py txt html cmd md"
+svgs=()
+txts=()
 
 for file in $(git diff-index --cached --name-only HEAD); do
-  if [[ -f $file ]]
-  then
-    if [[ $file == *.svg ]]; then svgs="$svgs $file"
-    else
-      for ext in $xtxt; do
-        if [[ $file == *.$ext ]]; then txts="$txts $file"; break; fi
-      done
+  if [[ -f $file ]]; then
+    if [[ $file == *.svg ]]; then svgs+=($file)
+    else txts+=($file)
     fi
   fi
 done
 
-if [[ -n $svgs ]]; then
-  echo cleaning svg files
-  $py $sompy/cleanSvg.py -l $svgs
-fi
-if [[ -n $txts ]]; then
-  echo cleaning text files
-  $py $sompy/cleanTxt.py -l $txts
-fi
-for file in $svgs $txts; do git add $file; done
+echo txt: ${#txts[@]}
+echo svg: ${#svgs[@]}
+
+done1=$($py $sompy/cleanSvg.py -le ${svgs[@]})
+done2=$($py $sompy/cleanTxt.py -le ${txts[@]})
+
+for file in $done1 $done2; do git add $file; done
