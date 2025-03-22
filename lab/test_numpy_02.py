@@ -39,7 +39,7 @@ def random_ones_and_zeros(p):
     while True:
         x = random.random()
         yield 1 if x < p else 0
-        
+
 def firstn(generator, n):
     for i in range(n):
         yield next(generator)

@@ -96,6 +96,6 @@ if __name__ == '__main__':
 
         for k, v in opts.items():
             print(f'{cpref} _{cfunc(k)}={vfunc(v)}')
-        print(f'{cpref} _args={cargs}{' '.join(args)}{cargs}')
+        print(f"{cpref} _args={cargs}{' '.join(args)}{cargs}")
 
     docshell()

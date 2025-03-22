@@ -38,11 +38,11 @@ print(x)
 x = np.arange(0.5, 6.1, 0.8, int)
 print(x)
 
-samples, spacing = np.linspace(1, 10, 5, 
+samples, spacing = np.linspace(1, 10, 5,
                                endpoint=True, retstep=True)
 print(samples, spacing)
 
-A = np.array([ [3.4, 8.7, 9.9], 
+A = np.array([ [3.4, 8.7, 9.9],
                [1.1, -7.8, -0.7],
                [4.1, 12.3, 4.8],
                [1.1, -7.8, -0.7]

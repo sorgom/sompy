@@ -34,5 +34,5 @@ options:
         for arg in args:
             print(cmd.replace(ph, arg))
     else:
-        print(f'set {opts.get('v', '_args')}=', end='')
+        print(f"set {opts.get('v', '_args')}=", end='')
         print(*list(fglob(args)))

@@ -10,16 +10,21 @@ def cleanTxt(txt:str, tabs=None, lf=False) -> str:
     if lf: txt = txt.replace('\r\n', '\n').replace('\r', '\n')
     return rxEnd.sub('', rxLin.sub('', txt)) + '\n'
 
-def cleanFile(fp:str, lf=False, **kw):
+def cleanFile(fp:str, lf=False, echo=False, **kw):
     """clean file content"""
     with open(fp, 'r') as fh:
-        cont = fh.read()
+        try:
+            cont = fh.read()
+        except Exception:
+            fh.close()
+            return
         fh.close()
         wopts = { 'newline': '\n' } if lf else {}
         with open(fp, 'w', **wopts) as fh:
             # eol correction is done by open mode
             fh.write(cleanTxt(cont, lf=False, **kw))
             fh.close()
+            if echo: print(fp)
 
 if __name__ == '__main__':
     from docopts import docopts
@@ -30,10 +35,12 @@ usage: this script [options] files
 options:
 -t  <size> tab size (default 4)
 -l  convert line endings to unix style
+-e  echo processed files
 -h  this help
 """
-    opts, args = docopts(help, reqArgs=True)
+    opts, args = docopts(help)
     tabs = int(opts.get('t', 4))
     lf = opts.get('l', False)
+    echo = opts.get('e', False)
     for arg in fglob(args):
-        cleanFile(arg, tabs=tabs, lf=lf)
+        cleanFile(arg, tabs=tabs, lf=lf, echo=echo)
