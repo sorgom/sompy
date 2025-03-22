@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 # use: git config core.hooksPath .gitHooks
 
-# availabilty of python
+# availability of python
 py=$(which py || which python || which python3)
 if [[ -z $py ]]
 then
@@ -19,8 +19,7 @@ svgs=()
 txts=()
 
 for file in $(git diff-index --cached --name-only HEAD); do
-  if [[ -f $file ]]
-  then
+  if [[ -f $file ]]; then
     if [[ $file == *.svg ]]; then svgs+=($file)
     else txts+=($file)
     fi
