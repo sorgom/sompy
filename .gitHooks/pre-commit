@@ -15,8 +15,8 @@ cd $(git rev-parse --show-toplevel)
 # path to sompy python scripts
 sompy=$(pwd)/somutil
 
-svgs=()
 txts=()
+svgs=()
 
 for file in $(git diff-index --cached --name-only HEAD); do
   if [[ -f $file ]]; then
@@ -29,7 +29,7 @@ done
 echo txt: ${#txts[@]}
 echo svg: ${#svgs[@]}
 
-done1=$($py $sompy/cleanSvg.py -le ${svgs[@]})
-done2=$($py $sompy/cleanTxt.py -le ${txts[@]})
+done1=$($py $sompy/cleanTxt.py -le ${txts[@]})
+done2=$($py $sompy/cleanSvg.py -le ${svgs[@]})
 
 for file in $done1 $done2; do git add $file; done
