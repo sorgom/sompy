@@ -1,6 +1,7 @@
 # local
 *.pkl
 tmp.*
+tmp
 *.html
 !*_template.html
 stuff

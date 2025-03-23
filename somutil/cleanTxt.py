@@ -24,7 +24,7 @@ def cleanFile(fp:str, lf=False, echo=False, **kw):
             # eol correction is done by open mode
             fh.write(cleanTxt(cont, lf=False, **kw))
             fh.close()
-            if echo: print(fp)
+            if echo: print(fp, end=' ')
 
 if __name__ == '__main__':
     from docopts import docopts

@@ -29,7 +29,7 @@ done
 echo txt: ${#txts[@]}
 echo svg: ${#svgs[@]}
 
-$py $sompy/cleanSvg.py -l ${svgs[@]}
-$py $sompy/cleanTxt.py -l ${txts[@]}
+done1=$($py $sompy/cleanSvg.py -le ${svgs[@]})
+done2=$($py $sompy/cleanTxt.py -le ${txts[@]})
 
-for file in ${txts[@]} ${svgs[@]}; do git add $file; done
+for file in $done1 $done2; do git add $file; done

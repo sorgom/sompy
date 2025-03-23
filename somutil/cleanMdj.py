@@ -19,7 +19,7 @@ def cleanMdj(fp:str, lf=False, echo=False):
         with open(fp, 'w', **wopts) as fh:
             fh.write(rxLine.sub('', rxClose.sub(r'\n\1', rxOpen.sub(r'\1\n', cont))))
             fh.close()
-            if echo: print(fp)
+            if echo: print(fp, end=' ')
 
 if __name__ == '__main__':
     from docopts import docopts
