@@ -1,3 +1,5 @@
+from collections import Counter
+from datetime import datetime
 from os import walk, remove
 from os.path import relpath, join, isdir, isfile, getmtime
 from shutil import rmtree, copytree, copyfile, copystat
@@ -14,21 +16,47 @@ class Robo(object):
         #   no file in target
         self.rxNoFile   = re.compile(r'^(?:)$')
 
+        self.stats = Counter()
+
+        self.caps = ['files removed', 'files copied', 'folders removed', 'folders copied', 'exceptions']
+
     @staticmethod
     def rpath(dir:str, base:str):
         "relative path without ."
         rp = relpath(dir, base)
         return '' if rp == '.' else rp
 
+    @staticmethod
+    def now():
+        return datetime.now()
+
     def chkDir(self, dir):
+        "check if folder exists"
         ok = isdir(dir)
-        self.echo('OK :' if ok else 'NOK:', dir)
+        if ok:
+            if self.verbose:
+                self.info('OK', dir)
+        else:
+            self.info('NOK', dir)
         return ok
 
     def echo(self, *args):
         "print if verbose"
         if self.verbose: print(*args)
 
+    @staticmethod
+    def info(top, cont):
+        print(f'{top:<20}:{cont:>10}')
+
+    @staticmethod
+    def rmn(a:list, n:int):
+        del(a[n:n+1])
+
+    def rmfile(self, file:str, reason:str):
+        "remove a file for given reason"
+        self.echo(f'rm ({reason}):', file)
+        remove(file)
+        self.stats[0] += 1
 
     def cpfile(self, src:str, dst:str):
         "copy file with attributes"
@@ -37,12 +65,15 @@ class Robo(object):
             copyfile(src, dst)
             copystat(src, dst)
         except:
-            pass
+            self.exc()
 
-    def rmfile(self, file:str, reason:str):
-        "remove a file for given reason"
-        self.echo(f'rm ({reason}):', file)
-        remove(file)
+        self.stats[1] += 1
+
+    def rmdir(self, dir:str, reason:str):
+        "remove directory"
+        self.echo(f'rm dir ({reason}):', dir)
+        rmtree(dir)
+        self.stats[2] += 1
 
     def cpdir(self, src:str, dst:str):
         "copy directory"
@@ -50,12 +81,8 @@ class Robo(object):
         try:
             copytree(src, dst)
         except:
-            pass
-
-    def rmdir(self, dir:str, reason:str):
-        "remove directory"
-        self.echo(f'rm dir ({reason}):', dir)
-        rmtree(dir)
+            self.exc()
+        self.stats[3] += 1
 
     def isOkDir(self, dir:str, all:bool=False):
         "determine whether to list a directory"
@@ -66,32 +93,64 @@ class Robo(object):
         self.echo('reading', dir, '..')
         return [ [self.rpath(root, dir), files] for root, dirs, files in walk(dir) if self.isOkDir(root, all) and (files or dirs)]
 
+    def exc(self):
+        self.stats[4] += 1
+
+    def showStats(self):
+
+        print()
+        for n, c in enumerate(self.caps):
+            self.info(c, self.stats[n])
+
+        print()
+        c = re.sub(r'\..*', '' , str(self.now() - self.start))
+        self.info('elapsed', c)
+
+
     def copy(self, src:str, dst:str):
+        print()
+        self.info('source', src)
+        self.info('destination', dst)
         if not (self.chkDir(src) and self.chkDir(dst)):
-            print('skip:', src, dst)
+            print('SKIPPED')
             return
+
+        self.start = self.now()
+
+        print('...', end="\r")
 
         ls = self.wlist(src)
         ld = self.wlist(dst, True)
         ds = { dir:files for dir, files in ls }
 
-        print('src:', len(ls))
-        print('dst:', len(ld))
+        print('     ')
+
+        self.echo('src:', len(ls))
+        self.echo('dst:', len(ld))
+
+        self.stats = Counter()
 
         # removal in target
-        for dir, tfiles in ld:
+        lnd = list(range(0, len(ld)))
+        lnd.reverse()
+
+        for nd in lnd:
+            dir, dfs = ld[nd]
             ddir = join(dst, dir)
-            # already removed?
-            if not isdir(ddir): continue
-            sfiles = ds.get(dir, None)
+            sfs = ds.get(dir, None)
             # non source folder
-            if sfiles is None:
+            if sfs is None:
                 self.rmdir(ddir, 'ns')
+                self.rmn(ld, nd)
                 continue
-            for file in tfiles:
+            lnf = list(range(0, len(dfs)))
+            lnf.reverse()
+            for nf in lnf:
+                file = dfs[nf]
                 dfile = join(ddir, file)
                 # non source file
-                if not file in sfiles:
+                if not file in sfs:
+                    self.rmn(dfs, nf)
                     self.rmfile(dfile, 'ns')
                     continue
                 # source is newer
@@ -100,27 +159,29 @@ class Robo(object):
                     ts = getmtime(sfile)
                     td = getmtime(dfile)
                     if ts > td:
+                        self.rmn(dfs, nf)
                         self.rmfile(dfile, 'mt')
                 except:
-                    pass
+                    self.exc()
+                    self.rmn(dfs, nf)
+                    self.rmfile(dfile, 'ex')
 
         # copy from source to target
-        for dir, sfiles in ls:
+        dd = { dir:files for dir, files in ld }
+        for dir, sfs in ls:
             ddir = join(dst, dir)
             sdir = join(src, dir)
-            if isfile(ddir):
-                self.rmfile(ddir, 'if')
-
-            if not isdir(ddir):
-                self.cpdir(sdir, ddir)
+            dfs = dd.get(dir, None)
+            if dfs is None:
+                if not isdir(ddir):
+                    self.cpdir(sdir, ddir)
                 continue
-            for file in sfiles:
-                sfile = join(sdir, file)
-                dfile = join(ddir, file)
-                if isdir(dfile):
-                    self.rmdir(dfile, 'fd')
-                if not isfile(dfile):
+            for file in sfs:
+                if not file in dfs:
+                    sfile = join(sdir, file)
+                    dfile = join(ddir, file)
                     self.cpfile(sfile, dfile)
+        self.showStats()
 
 if __name__ == '__main__':
     robo = Robo(True)
