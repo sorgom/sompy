@@ -1,19 +1,30 @@
+"""
+a simple robocopy style script
+usage: python this script [options] <source folder> <target folder>
+options:
+    -v  verbose
+    -D  <skip folders patterns> comma separated
+    -F  <skip files   patterns> comma separated
+    -h  this help
+"""
 from collections import Counter
 from datetime import datetime
 from os import walk, remove
-from os.path import relpath, join, isdir, isfile, getmtime
+from os.path import relpath, join, isdir, getmtime, basename
 from shutil import rmtree, copytree, copyfile, copystat
 import re
 
 class Robo(object):
     "robo copier class"
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, xDirs=None, xFiles=None):
         self.verbose = verbose
-        #   no directory in target
-        self.rxNoDir    = re.compile(r'^(?:__pycache__)$')
+        #   no directory copy to destination
+        self.rxNoDir = self.glob2re('__pycache__|found???', xDirs)
+        # print('pattern:', self.rxNoDir.pattern)
+        # exit()
         #   generally ignored
         self.rxIgDir    = re.compile(r'^(?:System Volume Information|\$.*)$')
-        #   no file in target
+        #   no file copy to destination
         self.rxNoFile   = re.compile(r'^(?:)$')
 
         self.stats = Counter()
@@ -21,14 +32,17 @@ class Robo(object):
         self.caps = ['files removed', 'files copied', 'folders removed', 'folders copied', 'exceptions']
 
     @staticmethod
+    def glob2re(x:str, usr:str):
+        if usr:
+            x += f'|{usr}'
+        x = re.sub(r'\?', '.', re.sub(r'\*', '.*', x))
+        return re.compile(rf'(?:^|[:/\\])(?:{x})(?:[/\\]|$)')
+
+    @staticmethod
     def rpath(dir:str, base:str):
         "relative path without ."
         rp = relpath(dir, base)
         return '' if rp == '.' else rp
-
-    @staticmethod
-    def now():
-        return datetime.now()
 
     def chkDir(self, dir):
         "check if folder exists"
@@ -61,19 +75,23 @@ class Robo(object):
     def cpfile(self, src:str, dst:str):
         "copy file with attributes"
         self.echo('copy:', dst)
+        self.stats[1] += 1
         try:
             copyfile(src, dst)
             copystat(src, dst)
         except:
             self.exc()
 
-        self.stats[1] += 1
 
     def rmdir(self, dir:str, reason:str):
         "remove directory"
         self.echo(f'rm dir ({reason}):', dir)
-        rmtree(dir)
         self.stats[2] += 1
+        try:
+            rmtree(dir)
+        except Exception as x:
+            print(x)
+            self.exc()
 
     def cpdir(self, src:str, dst:str):
         "copy directory"
@@ -86,7 +104,7 @@ class Robo(object):
 
     def isOkDir(self, dir:str, all:bool=False):
         "determine whether to list a directory"
-        return (not self.rxIgDir.match(dir)) and (all or not self.rxNoDir.match(dir))
+        return (not self.rxIgDir.search(dir)) and (all or not self.rxNoDir.search(dir))
 
     def wlist(self, dir:str, all:bool=False):
         "list relative non empty directories with files and subdirs"
@@ -103,7 +121,7 @@ class Robo(object):
             self.info(c, self.stats[n])
 
         print()
-        c = re.sub(r'\..*', '' , str(self.now() - self.start))
+        c = re.sub(r'\..*', '' , str(datetime.now() - self.start))
         self.info('elapsed', c)
 
 
@@ -115,7 +133,7 @@ class Robo(object):
             print('SKIPPED')
             return
 
-        self.start = self.now()
+        self.start = datetime.now()
 
         print('...', end="\r")
 
@@ -184,6 +202,8 @@ class Robo(object):
         self.showStats()
 
 if __name__ == '__main__':
-    robo = Robo(True)
-#    robo.copy('C:/users/MS/data', 'M:/tmp_backup_test')
-    robo.copy('M:', 'N:')
+    from docopts import docopts
+    opts, args = docopts(__doc__, reqArgs=True)
+    robo = Robo(True, xDirs=opts.get('D', ''), xFiles=opts.get('F', ''))
+    while len(args) > 1:
+        robo.copy(args.pop(0), args.pop(0))

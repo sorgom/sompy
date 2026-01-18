@@ -17,6 +17,6 @@
 <img src="../img/sunFlower_sample_solution.svg" width=300 height=auto alt="sample solution"/>
 
 ## sunFlower.py
-- uses this filed numbering
+- uses this field numbering
 
 <img src="../img/sunFlower_order.svg" width=300 height=auto alt="field order"/>
