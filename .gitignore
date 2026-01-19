@@ -2,6 +2,7 @@
 *.pkl
 tmp.*
 tmp
+tmp_*.*
 *.html
 !*_template.html
 stuff
