@@ -9,9 +9,9 @@ options
         kbps: 32 40 48 56 64 80 96 112 128 160 192 224 256 320
     -f  force owerwrite existing mp3 files
         default: owerwrites if wav is newer
-    -l  <int> limit of directory conversions per source / destination
+    -l  <int> limit of conversions per source / destination
+        (due to multi threading only a rough number)
     -t  <int> number of threads
-    -v  verbose
     -h  this help
 """
 
@@ -21,14 +21,14 @@ from os.path import join, isdir, isfile, getmtime
 from shutil import which, rmtree
 
 import sompy
-from progress import ProgressWheel
+from progress import ProgressNum
 from toType import toInt, toBool
 from ffnx import FFNX
 from mtbase import MtBase
 
 class Wav2Mp3(MtBase):
     "the converter class"
-    def __init__(self, quality=None, force=None, verbose=None, limit=None, numThreads=None):
+    def __init__(self, quality=None, force=None, limit=None, numThreads=None):
         super().__init__(numThreads)
         conv = 'lame.exe'
         lame = which(conv)
@@ -43,12 +43,14 @@ class Wav2Mp3(MtBase):
                 exit(1)
         else:
             quality = 'hifi'
-        self.cmd = f"{lame}{'' if verbose else ' --quiet'} --preset {quality}"
-        self.verbose = toBool(verbose)
+        self.cmd = f'{lame} --quiet --preset {quality}'
         self.force   = toBool(force)
         self.limit   = toInt(limit) if limit else None
-        self.cnt = 0
+        self.cnt = ProgressNum('converted', 20, 19)
         self.errors = 0
+        self.info('threads', self.numThreads())
+        if self.limit: self.info('limit', self.limit)
+        print()
 
     @staticmethod
     def chkDir(dir):
@@ -58,9 +60,8 @@ class Wav2Mp3(MtBase):
             return 1
         return 0
 
-    @staticmethod
-    def info(top:str, cont):
-        print(f'{top:<20}:{str(cont):>20}')
+    def info(self, *args):
+        self.cnt.info(*args)
 
     @staticmethod
     def mDir(dir):
@@ -70,25 +71,31 @@ class Wav2Mp3(MtBase):
     def outLimit(self):
         return self.limit and self.cnt >= self.limit
 
-    def work(self, wav:str, mp3:str):
+    def sFile(self, dir:str, name:str):
+        return join(self.sRoot, dir, f'{name}.wav')
+
+    def dFile(self, dir:str, name:str):
+        return join(self.dRoot, dir, f'{name}.mp3')
+
+    def w2m(self, wav:str, mp3:str):
         if isdir(mp3): rmtree(mp3)
         res = system(f'{self.cmd} "{wav}" "{mp3}"')
         if res == 0:
-            self.cnt += 1
-            print('.', end='', flush=True)
+            self.cnt.proceed()
         else:
             self.errors += 1
-            print('X', end='', flush=True)
+
+    @staticmethod
+    def newer(sf:str, df:str):
+        return getmtime(sf) > getmtime(df)
 
     def process(self, dir:str, mk:bool, wavs:set, mp3s:set={}):
-        sDir = join(self.sRoot, dir)
-        dDir = join(self.dRoot, dir)
-        if mk: self.mDir(dDir)
+        if mk: self.mDir(join(self.dRoot, dir))
         for name in sorted(wavs):
-            sf = join(sDir, f'{name}.wav')
-            df = join(dDir, f'{name}.mp3')
-            if self.force or (not name in mp3s) or (getmtime(sf) > getmtime(df)):
-                self.start(sf, df)
+            sf = self.sFile(dir, name)
+            df = self.dFile(dir, name)
+            if self.force or (not name in mp3s) or self.newer(sf, df):
+                self.launch(self.w2m, sf, df)
                 if self.outLimit(): break
 
     def transfer(self, sRoot:str, dRoot:str):
@@ -97,27 +104,39 @@ class Wav2Mp3(MtBase):
         begin = datetime.now()
         self.sRoot = sRoot
         self.dRoot = dRoot
-        self.cnt = 0
+        self.cnt.reset()
         self.errors = 0
 
-        self.info('threads', self.numThreads())
-
-        pgw = ProgressWheel()
 
         lSrc = list(FFNX(sRoot, '.wav'))
         lDst = list(FFNX(dRoot, '.mp3'))
         hSrc = { dir:names for dir, names in lSrc }
 
-        #   remove mp3 files if source has wav files and names not in list
-        for dir, dns in lDst:
-            sns = hSrc.get(dir)
-            if sns:
-                dels = dns - sns
-                if dels:
-                    print('delete:', dir, ':', *dels)
-                    # for name in dels:
-                    #     remove(join(dRoot, dir, f'{name}.mp3'))
-                    dns -= dels
+        #   the cleaning
+        #   if limit: no removal
+        #   if forced: all mp3
+        #   else: redundant and older
+        if not self.limit:
+            cnt = 0
+            for dir, dns in lDst:
+                sns = hSrc.get(dir)
+                if sns:
+                    dels = dns if self.force else dns - sns
+                    chks = (dns - dels) & sns
+
+                    for name in chks:
+                        sf = self.sFile(dir, name)
+                        df = self.dFile(dir, name)
+                        if self.newer(sf, df):
+                            dels.add(name)
+
+                    if dels:
+                        cnt += len(dels)
+                        for name in dels:
+                            remove(self.dFile(dir, name))
+                        dns -= dels
+
+            self.info('removed', cnt)
 
         hDst = { dir:names for dir, names in lDst }
 
@@ -133,20 +152,21 @@ class Wav2Mp3(MtBase):
 
         print()
 
-        self.info('conversions', self.cnt)
         self.info('errors', self.errors)
         dt = datetime.now() - begin
         self.info('elapsed time', dt)
         if self.cnt > 0:
-            avg = dt / self.cnt
+            avg = dt / self.cnt.count()
             self.info('average time', avg)
+        print()
 
 if __name__ == '__main__':
     from docopts import docopts
 
     opts, args = docopts(__doc__, reqArgs=True, all=True)
 
-    converter = Wav2Mp3(quality=opts['q'], force=opts['f'], verbose=opts['v'], limit=opts['l'], numThreads=opts['t'])
+    converter = Wav2Mp3(quality=opts['q'], force=opts['f'], limit=opts['l'], numThreads=opts['t'])
 
     while len(args) > 1:
-        converter.transfer(args.pop(0), args.pop(0))
+        converter.transfer(*args[0:2])
+        args = args[2:]

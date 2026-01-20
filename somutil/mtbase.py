@@ -15,15 +15,11 @@ class MtBase(object):
         self._states = [ 0 for n in rng]
         self._rng = rng
 
-    def work(self, *args):
-        "work method to be defined"
-        pass
-
-    def start(self, *args):
-        "start working thread"
-        n = self._getn()
+    def launch(self, func, *args):
+        "launch working thread"
+        n = self.__getn()
         self._states[n] = 1
-        th = Thread(target=self._tm, args=(n, *args))
+        th = Thread(target=self.__tm, args=(n, func, *args))
         self._threads[n] = th
         th.start()
 
@@ -35,23 +31,23 @@ class MtBase(object):
     def numThreads(self):
         return len(self._threads)
 
-    def _join(self, n:int):
+    def __join(self, n:int):
         self._threads[n].join()
         self._threads[n] = None
         self._states[n] = 0
 
-    def _tm(self, n:int, *args):
-        self.work(*args)
+    def __tm(self, n:int, func, *args):
+        func(*args)
         self._states[n] = 0
 
-    def _getn(self):
+    def __getn(self):
         "retrieve free thread spot"
         while True:
             for n in self._rng:
                 if self._threads[n] is None:
                     return n
                 if self._states[n] == 0:
-                    self._join(n)
+                    self.__join(n)
                     return n
             sleep(0.1)
 
@@ -74,8 +70,8 @@ if __name__ == '__main__':
         def run(self):
             "demo runtime"
             for n in range(1, 11):
-                print(f'start {n:>2}')
-                self.start(f'call {n + 100}')
+                print(f'launch {n:>2}')
+                self.launch(self.work, f'call {n + 100}')
             print('finalize')
             self.finalize()
 
