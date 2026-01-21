@@ -72,25 +72,23 @@ class FF_ExtNx(FF_Base):
 class FF_Re(FF_Base):
     """find files (and dirs) by regular expressions"""
     def __init__(self, root:str, reFile:re.Pattern=None, reDir:re.Pattern=None):
-        self.__reF = reFile
-        self.__reD = reDir
+        self._reF = reFile
+        self._reD = reDir
         super().__init__(root)
 
     def myFile(self, entry):
-        return entry if (not self.__reF) or self.__reF.match(entry.name) else None
+        return entry if (not self._reF) or self._reF.match(entry.name) else None
 
     def myDir(self, entry):
-        return (not self.__reD) or self.__reD.match(entry.name)
+        return (not self._reD) or self._reD.match(entry.name)
 
 class FF_ReCatch(FF_Re):
     """find files with catching (and dirs) by regular expressions"""
-    def __init__(self, root:str, reFile:re.Pattern=None, reDir:re.Pattern=None):
-        self.__reF = reFile
-        self.__reD = reDir
+    def __init__(self, root:str, reFile:re.Pattern, reDir:re.Pattern=None):
         super().__init__(root, reFile, reDir)
 
     def myFile(self, entry):
-        mo = self.__reF.match(entry.name)
+        mo = self._reF.match(entry.name)
         if mo:
             for x in mo.groups():
                 if x: return (x, entry)
@@ -127,5 +125,10 @@ if __name__ == '__main__':
 
     print('same result?', obj3.count() == obj4.count())
     print()
+
+    rx5 = re.compile(r'^(?:scr|DST).*$')
+    obj5 = FF_ReCatch(testdir, rx4, rx5)
+    test(obj5)
+
 
     # print(*obj2.data(), sep="\n")
