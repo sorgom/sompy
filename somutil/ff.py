@@ -129,6 +129,3 @@ if __name__ == '__main__':
     rx5 = re.compile(r'^(?:scr|DST).*$')
     obj5 = FF_ReCatch(testdir, rx4, rx5)
     test(obj5)
-
-
-    # print(*obj2.data(), sep="\n")
