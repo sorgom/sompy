@@ -38,14 +38,13 @@ class XGlob():
         "create re object from xglob(s)"
         if not cs: return None
         cp = "|".join([self.glob2p(c) for c in cs])
-        print('CP:', cp)
-        return re.compile(rf'^(?:{cp})$')
+        return rf'^(?:{cp})$'
 
 if __name__ == '__main__':
 
     cs = ['(tmp_?{1,5}).??{1,2}', '$sys[A-D]<?wumpel.pyc<?', '(tmp_*).*']
     xg = XGlob()
-    rx = xg.glob2re(*cs)
+    rx = re.compile(xg.glob2re(*cs))
 
     print(rx.pattern, type(rx))
     mo = rx.match('tmp_xyz.dat')

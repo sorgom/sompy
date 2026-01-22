@@ -8,10 +8,6 @@ class FF_Base:
     """find files base class"""
     def __init__(self, root:str):
         self.__root = root
-        self.__data = []
-        self.__errs = []
-        self.__cnt = 0
-        self.__recDirs()
 
     def myFile(self, entry):
         return entry
@@ -26,28 +22,14 @@ class FF_Base:
                 items = list(iter)
                 fs = [e for e in [self.myFile(i) for i in items if i.is_file(follow_symlinks=False)] if e]
                 ds = [i.name for i in items if i.is_dir(follow_symlinks=False) and self.myDir(i)]
-                if fs:
-                    self.__data.append((join(*dirs) if dirs else '', fs))
-                    self.__cnt += len(fs)
+                yield (join(*dirs) if dirs else '', fs)
                 for d in ds:
-                    self.__recDirs(*dirs, d)
+                    for x in self.__recDirs(*dirs, d): yield x
         except:
-            self.__errs.append(dd)
+            pass
 
     def __iter__(self):
-         for x in self.__data: yield x
-
-    def data(self):
-        return self.__data
-
-    def count(self):
-        return self.__cnt
-
-    def errors(self):
-        return self.__errs
-
-    def errcnt(self):
-        return len(self.__errs)
+         for x in self.__recDirs(): yield x
 
 class FF_Ext(FF_Base):
     """find files by extensions"""
@@ -71,24 +53,40 @@ class FF_ExtNx(FF_Base):
 
 class FF_Re(FF_Base):
     """find files (and dirs) by regular expressions"""
-    def __init__(self, root:str, reFile:re.Pattern=None, reDir:re.Pattern=None):
-        self._reF = reFile
-        self._reD = reDir
+
+    def __init__(self, root:str, sTF:str=None, sTD:str=None, sXF:str=None, sXD:str=None):
         super().__init__(root)
+        self._rcTF = re.compile(sTF) if sTF else None
+        self._rcTD = re.compile(sTD) if sTD else None
+        self._rcXF = re.compile(rf'(?!{sXF})') if sXF else None
+        self._rcXD = re.compile(rf'(?!{sXD})') if sXD else None
+        self._mTF = lambda e: self._rcTF.match(e.name) if sTF else lambda e: True
+        self._mTD = lambda e: self._rcTD.match(e.name) if sTD else lambda e: True
+        self._mXF = lambda e: self._rcXF.match(e.name) if sXF else lambda e: True
+        self._mXD = lambda e: self._rcXD.match(e.name) if sXD else lambda e: True
+
+    @staticmethod
+    def _reM(rx:re.Pattern, entry):
+        return (not rx) or rx.match(entry.name)
+
+    @staticmethod
+    def _reX(rx:re.Pattern, entry):
+        return (not rx) or not rx.match(entry.name)
 
     def myFile(self, entry):
-        return entry if (not self._reF) or self._reF.match(entry.name) else None
+        return entry if self._mTF(entry) and self._mXF(entry) else None
 
     def myDir(self, entry):
-        return (not self._reD) or self._reD.match(entry.name)
+        return self._mTD(entry) and self._mXD(entry)
 
 class FF_ReCatch(FF_Re):
     """find files with catching (and dirs) by regular expressions"""
-    def __init__(self, root:str, reFile:re.Pattern, reDir:re.Pattern=None):
-        super().__init__(root, reFile, reDir)
+    def __init__(self, root:str, sTF:str, sTD:str=None, sXF:str=None, sXD:str=None):
+        super().__init__(root, sTF, sTD, sXF, sXD)
 
     def myFile(self, entry):
-        mo = self._reF.match(entry.name)
+        if not self._mXF(entry): return None
+        mo = self._rcTF.match(entry.name)
         if mo:
             for x in mo.groups():
                 if x: return (x, entry)
@@ -96,36 +94,73 @@ class FF_ReCatch(FF_Re):
 
 if __name__ == '__main__':
     from os.path import dirname, abspath
+    from stopwatch import StopWatch
     testdir = abspath(join(dirname(__file__), '..', '..'))
+
+    sw = StopWatch()
 
     def test(obj:FF_Base):
         print('TYP:', type(obj))
-        print('CNT:', obj.count())
-        print('ERR:', obj.errcnt())
+        cnt = 0
+        for d, fs in obj:
+            cnt += len(fs)
+        print('CNT:', cnt)
+        sw.stop().ms().avrg_ms(cnt)
         print()
-
+        return cnt
     # test(FF_Base(testdir))
 
     obj1 = FF_ExtNx(testdir, '.py')
-    test(obj1)
+    n1 = test(obj1)
 
-    rx2 = re.compile(r'^(.*?)\.py$')
+    rx2 = r'^(.*?)\.py$'
     obj2 = FF_ReCatch(testdir, rx2)
-    test(obj2)
+    n2 = test(obj2)
 
-    print('same result?', obj1.count() == obj2.count())
+    print('same result?', n1 == n2)
     print()
 
     obj3 = FF_Ext(testdir, '.py', '.txt', '.sh')
-    test(obj3)
+    n3 = test(obj3)
 
-    rx4 = re.compile(r'^(.*?)\.(?:py|txt|sh)$')
+    rx4 = r'^(.*?)\.(?:py|txt|sh)$'
     obj4 = FF_ReCatch(testdir, rx4)
-    test(obj4)
+    n4 = test(obj4)
 
-    print('same result?', obj3.count() == obj4.count())
+    print('same result?', n3 == n4)
     print()
 
     rx5 = re.compile(r'^(?:scr|DST).*$')
     obj5 = FF_ReCatch(testdir, rx4, rx5)
     test(obj5)
+
+    obj3 = FF_Ext('C:', '.py', '.txt', '.sh')
+    n3 = test(obj3)
+
+    rx4 = r'^(.*?)\.(?:py|txt|sh)$'
+    obj4 = FF_ReCatch('C:', rx4)
+    n4 = test(obj4)
+
+    print('same result?', n3 == n4)
+    print()
+
+    from typing import Type
+    def test2(cls: Type[FF_Base], *params, dir:str=testdir):
+        print('class:', cls)
+        print('drive:', dir)
+        obj = cls(dir, *params)
+        nd = 0
+        nf = 0
+        for d, fs in obj:
+            nd += 1
+            nf += len(fs)
+        sw.stop()
+
+        print('files:', nf)
+        print('dirs :', nd)
+        print('time :', sw.str_sec())
+        print('avrg :', sw.avrg_str_ms(nd), '/ dir')
+        print()
+        return nd
+
+    test2(FF_ReCatch, rx4, dir='N:')
