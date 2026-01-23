@@ -29,6 +29,7 @@ class ProgressNum(object):
         self.w2 = w2
         self.cap = cap
         self.cnt = 0
+        self.wumpel = lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
 
     def proceed(self):
         self.cnt += 1
@@ -65,9 +66,11 @@ if __name__ == '__main__':
         pg.proceed()
         sleep(0.1)
     print()
-    pg = ProgressNum('hello', 8, 7)
+    pg = ProgressNum('hello', 20, 19)
     while True:
         pg.proceed()
         if pg == 10: break
         sleep(0.1)
     print()
+
+    pg.wumpel('hello', 'world')

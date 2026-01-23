@@ -2,13 +2,20 @@
 bulk wav to mp3 conversion
 requires lame.exe to be available within PATH
 
+steps
+- recurse all sub folders (sf)
+- transfer source sf/*.wav to destination sf/*.mp3
+    - if destination sf/*.mp3 does not exist
+    - if source sf/*.wav is newer
+    - if force overwrite -f is specified
+
 usage: this script [options] <source folder> <destination folder>
 options
     -q  <quality> medium standard extreme insane or <kbps>
         default: hifi (recommended)
         kbps: 32 40 48 56 64 80 96 112 128 160 192 224 256 320
-    -f  force owerwrite existing mp3 files
-        default: owerwrites if wav is newer
+    -f  force overwrite existing mp3 files
+        default: overwrites if wav is newer
     -l  <int> limit of conversions per source / destination
         (due to multi threading only a rough number)
     -t  <int> number of threads
@@ -21,10 +28,13 @@ from os.path import join, isdir, isfile, getmtime
 from shutil import which, rmtree
 
 import sompy
-from progress import ProgressNum
-from toType import toInt, toBool
-from ffnx import FFNX
+from ff import FF_XGlob
 from mtbase import MtBase
+from progress import ProgressNum
+from stopWatch import StopWatch
+from toType import toInt, toBool
+
+
 
 class Wav2Mp3(MtBase):
     "the converter class"

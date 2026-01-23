@@ -43,3 +43,50 @@ ga = lambda n : all(g(n) for g in pool)
 
 for n in [1, 2, 3]:
     print(n, ga(n))
+
+gp = lambda *p : print(*p)
+gp('hello', 'world')
+
+def buildLambda(w1:int, w2:int):
+    return lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
+
+ll = buildLambda(20, 19)
+ll('hello', 'world')
+
+class TL:
+    def __init__(self, cap:str='count', w1:int=10, w2:int=9):
+        def buildLInfo():
+            return lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
+        def buildPgr():
+            return lambda : print(f'{cap:<{w1}}:{str(self.__cnt):>{w2}}', end="\r")
+
+        self.info = buildLInfo()
+
+        self.__prinf = buildPgr()
+        self.__cnt = 0
+
+    def proceed(self):
+        self.__cnt += 1
+        self.__prinf()
+
+tl = TL()
+tl.info('hello', 'world')
+tl.proceed()
+tl.proceed()
+print()
+
+import re
+ignorC = False
+def buildRe(pat:str):
+    opts = [re.I] if ignorC else []
+    rx = re.compile(pat, *opts)
+    return lambda c, *p : rx.match(c)
+
+def test(func):
+    for c in ('some.py', 'some.txt', 'some.PY'):
+        print(c, func(c))
+
+test(buildRe('^(.*)\.py$'))
+
+ignorC = True
+test(buildRe('^.*\.(py)$'))

@@ -5,14 +5,14 @@ glob        meaning         regex
 ------------------------------------
    .    ->  . literal       . masked
    *    ->  anything        .*
-   ?    ->  one character   .
+   §    ->  one character   .
    $    ->  $ literal       $ masked
    ^    ->  ^ literal       ^ masked
 
 to get regex meaning of ?, ^, $ and *: use <
 glob        regex
 -----------------
-   <?   ->  ?
+   <§   ->  ?
    <*   ->  *
    <^   ->  ^
    <$   ->  $
@@ -24,7 +24,7 @@ class XGlob():
     def __init__(self):
         self.__rxRestore = re.compile(r'[<]([\?\*\^\$\.])')
         self.__rxMask    = re.compile(r'(?<![<])([\.\*\?\^\$])')
-        self.__repls = {'?':'.', '*':'.*'}
+        self.__repls = {'§':'.', '*':'.*'}
 
     def __repl(self, mo):
         return self.__repls.get(mo[1], f'\\{mo[1]}')
@@ -55,7 +55,7 @@ class XGlob():
 
 if __name__ == '__main__':
 
-    cs = ['(tmp_?{1,5}).??{1,2}', '$sys[A-D]<?wumpel.pyc<?'],
+    cs = ['(tmp_§{1,5}).§§{1,2}', '$sys[A-D]?wumpel.pyc?'],
     xg = XGlob()
     rx = re.compile(xg.glob2re(cs, '(tmp_*).*'))
 
