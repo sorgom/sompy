@@ -2,6 +2,10 @@
 
 from os import scandir
 from os.path import join
+import re
+
+import sompy
+from xglob import XGlob
 
 class StartEntry:
     def __init__(self, path):
@@ -65,7 +69,6 @@ class FF_Base:
         self.__errcnt = 0
         for x in self.__recDirs(StartEntry(self.__root), ''): yield x
 
-import re
 class FF_Re(FF_Base):
     """
     find files (and dirs) by regular expressions
@@ -109,7 +112,6 @@ class FF_Re(FF_Base):
             return (e.name, e)
         return None
 
-from xglob import XGlob
 class FF_XGlob(FF_Re):
     """
     find files (and dirs) using XGlob notation
@@ -121,9 +123,11 @@ class FF_XGlob(FF_Re):
         super().__init__(root, tr(xgTF), tr(xgXF), tr(xgTD), tr(xgXD), ignoreCase, unmatchedDirs)
 
 if __name__ == '__main__':
+    from os import name as oname
     from os.path import dirname, abspath
     from typing import Type
 
+    import sompy
     from stopWatch import StopWatch
 
     testDir = abspath(join(dirname(__file__), '..'))
