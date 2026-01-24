@@ -73,6 +73,15 @@ class Wav2Mp3(MtBase):
     def info(self, *args):
         self.cnt.info(*args)
 
+    def scanWav(self, rootWav):
+        glWav = FF_XGlob(rootWav, '(*).wav')
+        self.dataWav = tuple(d for d in glWav)
+
+    def scanMp3(self, rootMp3):
+        glMp3 = FF_XGlob(rootMp3, '(*).mp3')
+        self.mapMp3 = { deMp3.rp:deMp3.fs for deMp3 in glMp3 }
+
+
     @staticmethod
     def mDir(dir):
         if isfile(dir): remove(dir)
@@ -80,12 +89,6 @@ class Wav2Mp3(MtBase):
 
     def outLimit(self):
         return self.limit and self.cnt >= self.limit
-
-    def sFile(self, dir:str, name:str):
-        return join(self.sRoot, dir, f'{name}.wav')
-
-    def dFile(self, dir:str, name:str):
-        return join(self.dRoot, dir, f'{name}.mp3')
 
     def w2m(self, wav:str, mp3:str):
         if isdir(mp3): rmtree(mp3)
@@ -95,80 +98,70 @@ class Wav2Mp3(MtBase):
         else:
             self.errors += 1
 
-    @staticmethod
-    def newer(sf:str, df:str):
-        return getmtime(sf) > getmtime(df)
+    def process(self, workload:list):
+        # print('process:', len(workload))
+        for wav, mp3 in workload:
+            self.launch(self.w2m, wav, mp3)
+            if self.outLimit():
+                # print('limit!')
+                break
 
-    def process(self, dir:str, mk:bool, wavs:set, mp3s:set={}):
-        if mk: self.mDir(join(self.dRoot, dir))
-        for name in sorted(wavs):
-            sf = self.sFile(dir, name)
-            df = self.dFile(dir, name)
-            if self.force or (not name in mp3s) or self.newer(sf, df):
-                self.launch(self.w2m, sf, df)
-                if self.outLimit(): break
-
-    def transfer(self, sRoot:str, dRoot:str):
-        if self.chkDir(sRoot) + self.chkDir(dRoot) > 0:
+    def transfer(self, rootWav:str, rootMp3:str):
+        if self.chkDir(rootWav) + self.chkDir(rootMp3) > 0:
             exit(1)
-        begin = datetime.now()
-        self.sRoot = sRoot
-        self.dRoot = dRoot
         self.cnt.reset()
+        sw = StopWatch()
         self.errors = 0
 
+        glWav = FF_XGlob(rootWav, '(*).wav')
+        glMp3 = FF_XGlob(rootMp3, '(*).mp3')
 
-        lSrc = list(FFNX(sRoot, '.wav'))
-        lDst = list(FFNX(dRoot, '.mp3'))
-        hSrc = { dir:names for dir, names in lSrc }
+        self.launch(self.scanWav, rootWav)
+        self.launch(self.scanMp3, rootMp3)
+        # dataWav = tuple(d for d in glWav)
+        # mapMp3 = { deMp3.rp:deMp3.fs for deMp3 in glMp3 }
+        self.finalize()
 
-        #   the cleaning
-        #   if limit: no removal
-        #   if forced: all mp3
-        #   else: redundant and older
-        if not self.limit:
-            cnt = 0
-            for dir, dns in lDst:
-                sns = hSrc.get(dir)
-                if sns:
-                    dels = dns if self.force else dns - sns
-                    chks = (dns - dels) & sns
+        sw.stop()
+        self.info('analysis', sw.str_sec())
 
-                    for name in chks:
-                        sf = self.sFile(dir, name)
-                        df = self.dFile(dir, name)
-                        if self.newer(sf, df):
-                            dels.add(name)
-
-                    if dels:
-                        cnt += len(dels)
-                        for name in dels:
-                            remove(self.dFile(dir, name))
-                        dns -= dels
-
-            self.info('removed', cnt)
-
-        hDst = { dir:names for dir, names in lDst }
-
-        for dir, sns in lSrc:
-            if self.outLimit(): break
-            dns = hDst.get(dir)
-            if dns is None:
-                self.process(dir, True, sns)
+        for deWav in self.dataWav:
+            fsMp3 = self.mapMp3.get(deWav.rp)
+            workload = []
+            if fsMp3:
+                # print('matched:', deWav.rp )
+                mMp3 = { key:fe for key, fe in fsMp3 }
+                # print('mMp3', len(mMp3))
+                for keyWav, feWav in deWav.fs:
+                    feMp3 = mMp3.get(keyWav)
+                    if feMp3:
+                        # print('found:', feMp3.path)
+                        if self.force or feWav.stat().st_mtime > feMp3.stat().st_mtime:
+                            workload.append((feWav.path, feMp3.path))
+                            # print('C1', feWav.path, '->', feMp3.path)
+                    else:
+                        pathMp3 = join(rootMp3, deWav.rp, f'{keyWav}.mp3')
+                        # print('C2:', feWav.path, '->', pathMp3)
+                        workload.append((feWav.path, pathMp3))
             else:
-                self.process(dir, False, sns, dns)
+                dirMp3 = join(rootMp3, deWav.rp)
+                # print('check dir:', dirMp3)
+                self.mDir(dirMp3)
+                for keyWav, feWav in deWav.fs:
+                    pathMp3 = join(dirMp3, f'{keyWav}.mp3')
+                    # print('C3:', feWav.path, '->', pathMp3)
+                    workload.append((feWav.path, pathMp3))
+
+            self.process(workload)
+            if self.outLimit(): break
 
         self.finalize()
 
         print()
-
+        sw.stop()
         self.info('errors', self.errors)
-        dt = datetime.now() - begin
-        self.info('elapsed time', dt)
-        if self.cnt > 0:
-            avg = dt / self.cnt.count()
-            self.info('average time', avg)
-        print()
+        self.info('elapsed time', sw.str_sec())
+        self.info('average', sw.avrg_str_sec(self.cnt.count()))
 
 if __name__ == '__main__':
     from docopts import docopts

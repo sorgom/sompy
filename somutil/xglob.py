@@ -12,7 +12,7 @@ glob        meaning         regex
 to get regex meaning of ?, ^, $ and *: use <
 glob        regex
 -----------------
-   <§   ->  ?
+   <§   ->  §
    <*   ->  *
    <^   ->  ^
    <$   ->  $
@@ -22,8 +22,8 @@ import re
 class XGlob():
     "extended glob to regex transposer class"
     def __init__(self):
-        self.__rxRestore = re.compile(r'[<]([\?\*\^\$\.])')
-        self.__rxMask    = re.compile(r'(?<![<])([\.\*\?\^\$])')
+        self.__rxRestore = re.compile(r'[<]([\§\*\^\$\.])')
+        self.__rxMask    = re.compile(r'(?<![<])([\.\*\§\^\$])')
         self.__repls = {'§':'.', '*':'.*'}
 
     def __repl(self, mo):

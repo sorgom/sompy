@@ -85,38 +85,44 @@ class FF_Re(FF_Base):
     find files (and dirs) by regular expressions
 
     """
+    #   local regex lambda generator
+    class __MkCheck:
+        def __init__(self, ignoreCase:bool=False):
+            self.opts = [re.I] if ignoreCase else []
+            self.groups = None
+
+        def gen(self, pat:str):
+            rx = re.compile(pat, *self.opts)
+            self.groups = rx.groups
+            return lambda e, *p : rx.match(e.name)
 
     def __init__(self, root:str, sTF:str=None, sXF:str=None, sTD:str=None, sXD:str=None, ignoreCase=False, unmatchedDirs=False):
         super().__init__(root)
-        if ignoreCase:
-            comp = lambda cp : re.compile(cp, re.I)
-        else:
-            comp = lambda cp : re.compile(cp)
+
+        mkc = self.__MkCheck(ignoreCase)
 
         if sTF:
-            self._rcTF = comp(sTF)
-            if self._rcTF.groups:
-                self._genF = self._genCatchF
+            check = mkc.gen(sTF)
+            if mkc.groups:
+                self._genChk = check
+                self._genF   = self._genCatchF
             else:
-                self.addCheckTF(lambda e: self._rcTF.match(e.name))
+                self.addCheckTF(check)
 
         if sXF:
-            self._rcXF = comp(sXF)
-            self.addCheckXF(lambda e: self._rcXF.match(e.name))
+            self.addCheckXF(mkc.gen(sXF))
 
         if sTD:
-            self._rcTD = comp(sTD)
-            self.addCheckTD(lambda e, fs: self._rcTD.match(e.name))
+            self.addCheckTD(mkc.gen(sTD))
 
         if sXD:
-            self._rcXD = comp(sXD)
-            self.addCheckXD(lambda e: self._rcXD.match(e.name))
+            self.addCheckXD(mkc.gen(sXD))
 
         if not unmatchedDirs:
             self.addCheckTD(lambda e, fs: fs)
 
     def _genCatchF(self, e):
-        mo = self._rcTF.match(e.name)
+        mo = self._genChk(e)
         if mo:
             for x in mo.groups():
                 if x: return (x, e)
@@ -148,16 +154,22 @@ if __name__ == '__main__':
 
         pr('class', cls.__name__)
         pr('params', *params)
+        pr('ignoreCase', ignoreCase)
+        pr('unmatchedDirs', unmatchedDirs)
         pr('dir', dir)
         nd = 0
         nf = 0
         sw = StopWatch()
         ff = cls(dir, *params, ignoreCase=ignoreCase, unmatchedDirs=unmatchedDirs)
+        tp = None
         for ffe in ff:
             nd += 1
             nf += len(ffe.fs)
+            if tp is None and ffe.fs:
+                tp = type(ffe.fs[0]).__name__
         sw.stop()
 
+        pr('element type', tp)
         pr('folders visited', ff.dircnt())
         pr('folders listed', nd)
         pr('files', nf)
@@ -167,4 +179,6 @@ if __name__ == '__main__':
         print()
         return nd
 
-    test(FF_XGlob, ('(*).PY') , None, None, ('__pycache__', 'template', 'lab'), ignoreCase=True)
+    test(FF_XGlob, ('(*).PY§?') , None, None, ('__pycache__', 'template', 'lab'), ignoreCase=True)
+    test(FF_XGlob, ('*.pyc?') , 'som*', ('*util', 'samp*'), unmatchedDirs=True)
+    test(FF_XGlob, ('*.pyc?') , 'som*', unmatchedDirs=True)

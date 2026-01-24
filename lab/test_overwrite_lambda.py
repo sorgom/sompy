@@ -77,12 +77,16 @@ print()
 
 import re
 ignorC = False
+glv = False
 def buildRe(pat:str):
+    global glv
+    glv = False
     opts = [re.I] if ignorC else []
     rx = re.compile(pat, *opts)
     return lambda c, *p : rx.match(c)
 
 def test(func):
+    print('func', func)
     for c in ('some.py', 'some.txt', 'some.PY'):
         print(c, func(c))
 
@@ -90,3 +94,5 @@ test(buildRe('^(.*)\.py$'))
 
 ignorC = True
 test(buildRe('^.*\.(py)$'))
+
+print(glv)
