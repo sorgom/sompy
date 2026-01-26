@@ -25,7 +25,7 @@ options
 from collections import Counter
 from enum import Enum, auto
 from os import remove, makedirs, system, name as oname
-from os.path import join, isdir, isfile, getmtime
+from os.path import join, isdir, isfile
 from shutil import which, rmtree
 import re
 
@@ -50,7 +50,7 @@ class Wav2Mp3(MtBase):
 
     def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None):
         super().__init__(numThreads)
-        conv = 'lame.exe'
+        conv = 'lame'
         lame = which(conv)
         if lame is None:
             print('no', conv, 'converter found on PATH.')
