@@ -30,7 +30,7 @@ from shutil import which, rmtree
 import re
 
 import sompy
-from ff import FF_XGlob, FF_Re
+from ff import FF_Re
 from mtbase import MtBase
 from progress import ProgressNum
 from stopWatch import StopWatch
@@ -133,10 +133,7 @@ class Wav2Mp3(MtBase):
     def w2m(self, wav:str, mp3:str, s:ST):
         if isdir(mp3): rmtree(mp3)
         res = system(f'{self.cmd} "{wav}" "{mp3}"')
-        if res == 0:
-            self.count(s)
-        else:
-            self.count(self.ST.errors)
+        self.count(s if res == 0 else self.ST.errors)
 
     def process(self, *work):
         if self.outLimit(): return
@@ -155,8 +152,10 @@ class Wav2Mp3(MtBase):
         self.finalize()
 
         sw.stop()
-        self.info('analysis', sw.str_ms())
+        self.info('scan', sw.str_ms())
         print()
+
+        self.cnt.show()
 
         for deWav in self.dataWav:
             mMp3 = self.mapMp3.get(self.dirKey(deWav))
