@@ -43,8 +43,8 @@ class XGlob():
         return self.__rxRestore.sub(r'\1',
             self.__rxMask.sub(self.__repl, c))
 
-    def glob2re(self, *cs, anc=True):
-        "create re object from xglob(s)"
+    def glob2rp(self, *cs, anc=True):
+        "create re pattern from xglob(s)"
         if not cs: return None
         fl = self.__flatten(cs)
         if not fl: return None
@@ -52,12 +52,11 @@ class XGlob():
         cp = rf'(?:{cp})'
         return rf'^{cp}$' if anc else cp
 
-
 if __name__ == '__main__':
 
     cs = ['(tmp_§{1,5}).§§{1,2}', '$sys[A-D]?wumpel.pyc?'],
     xg = XGlob()
-    rx = re.compile(xg.glob2re(cs, '(tmp_*).*'))
+    rx = re.compile(xg.glob2rp(cs, '(tmp_*).*'))
 
     print(rx.pattern, type(rx))
     mo = rx.match('tmp_xyz.dat')
@@ -66,5 +65,5 @@ if __name__ == '__main__':
             if x:
                 print(n, x)
                 break
-    c = xg.glob2re(None)
+    c = xg.glob2rp(None)
     print('None', c)

@@ -25,18 +25,30 @@ class ProgressDots(object):
 
 class ProgressNum(object):
     def __init__(self, cap:str='count', w1:int=10, w2:int=9):
-        self.w1 = w1
-        self.w2 = w2
-        self.cap = cap
         self.cnt = 0
-        self.wumpel = lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
+
+        def mkInfo():
+            return lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
+
+        self.info = mkInfo()
+
+        def mkOut():
+            return lambda : print(f'{cap:<{w1}}:{self.cnt:>{w2}d}', end="\r")
+
+        self.__out = mkOut()
 
     def proceed(self):
         self.cnt += 1
-        print(f'{self.cap:<{self.w1}}:{self.cnt:{self.w2}d}', end="\r")
+        self.__out()
 
-    def info(self, top:str, cont):
-        print(f'{top:<{self.w1}}:{str(cont):>{self.w2}}')
+    def back(self):
+        self.cnt -= 1
+        self.__out()
+
+        # print(f'{self.cap:<{self.w1}}:{self.cnt:{self.w2}d}', end="\r")
+
+    # def info(self, top:str, cont):
+    #     print(f'{top:<{self.w1}}:{str(cont):>{self.w2}}')
 
     def count(self):
         return self.cnt

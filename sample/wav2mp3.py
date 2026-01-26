@@ -16,19 +16,21 @@ options
         kbps: 32 40 48 56 64 80 96 112 128 160 192 224 256 320
     -f  force overwrite existing mp3 files
         default: overwrites if wav is newer
+    -c  clean additional mp3 files in each directory with mp3 files
     -l  <int> limit of conversions per source / destination
         (due to multi threading only a rough number)
     -t  <int> number of threads
     -h  this help
 """
-
-from datetime import datetime
-from os import remove, makedirs, system
+from collections import Counter
+from enum import Enum, auto
+from os import remove, makedirs, system, name as oname
 from os.path import join, isdir, isfile, getmtime
 from shutil import which, rmtree
+import re
 
 import sompy
-from ff import FF_XGlob
+from ff import FF_XGlob, FF_Re
 from mtbase import MtBase
 from progress import ProgressNum
 from stopWatch import StopWatch
@@ -38,7 +40,15 @@ from toType import toInt, toBool
 
 class Wav2Mp3(MtBase):
     "the converter class"
-    def __init__(self, quality=None, force=None, limit=None, numThreads=None):
+
+    class ST(Enum):
+        "enumeration for statistics"
+        new = 0
+        replaced = auto()
+        removed = auto()
+        errors = auto()
+
+    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None):
         super().__init__(numThreads)
         conv = 'lame.exe'
         lame = which(conv)
@@ -53,13 +63,36 @@ class Wav2Mp3(MtBase):
                 exit(1)
         else:
             quality = 'hifi'
+
         self.cmd = f'{lame} --quiet --preset {quality}'
-        self.force   = toBool(force)
-        self.limit   = toInt(limit) if limit else None
-        self.cnt = ProgressNum('converted', 20, 19)
-        self.errors = 0
+
+        self.ignoreCase = oname != 'posix'
+
+        def mkDirKey():
+            if self.ignoreCase: return lambda e : e.relpath().upper()
+            else: return lambda e : e.relpath()
+
+        rx = re.compile(r'^(.*)\..*?$')
+        def mkFileKey():
+            if self.ignoreCase: return lambda e : rx.sub(r'\1', e.name()).upper()
+            else: return lambda e : rx.sub(r'\1', e.name())
+
+        def mkMp3Name():
+            return lambda e : rx.sub(r'\1.mp3', e.name())
+
+        self.dirKey     = mkDirKey()
+        self.fileKey    = mkFileKey()
+        self.mp3Name    = mkMp3Name()
+
+        self.force  = toBool(force)
+        self.limit  = toInt(limit) if limit else None
+        self.clean  = toBool(clean)
+        self.cnt    = ProgressNum('attempt no.', 15, 12)
+
+        self.stats = Counter()
+
         self.info('threads', self.numThreads())
-        if self.limit: self.info('limit', self.limit)
+        self.info('limit', self.limit if self.limit else '--')
         print()
 
     @staticmethod
@@ -70,17 +103,24 @@ class Wav2Mp3(MtBase):
             return 1
         return 0
 
+    def count(self, s:ST):
+        self.stats[s.value] += 1
+
     def info(self, *args):
         self.cnt.info(*args)
 
+    def mkMap(self, data:tuple):
+        return { self.dirKey(de):{self.fileKey(fe):fe for fe in de.data} for de in data }
+
     def scanWav(self, rootWav):
-        glWav = FF_XGlob(rootWav, '(*).wav')
+        glWav = FF_Re(rootWav, r'^.*\.wav$', ignoreCase=self.ignoreCase)
         self.dataWav = tuple(d for d in glWav)
+        if self.clean: self.mapWav = self.mkMap(self.dataWav)
 
     def scanMp3(self, rootMp3):
-        glMp3 = FF_XGlob(rootMp3, '(*).mp3')
-        self.mapMp3 = { deMp3.rp:deMp3.fs for deMp3 in glMp3 }
-
+        glMp3 = FF_Re(rootMp3, r'^.*\.mp3$', ignoreCase=self.ignoreCase)
+        self.dataMp3 = tuple(d for d in glMp3)
+        self.mapMp3 = self.mkMap(self.dataMp3)
 
     @staticmethod
     def mDir(dir):
@@ -90,76 +130,72 @@ class Wav2Mp3(MtBase):
     def outLimit(self):
         return self.limit and self.cnt >= self.limit
 
-    def w2m(self, wav:str, mp3:str):
+    def w2m(self, wav:str, mp3:str, s:ST):
         if isdir(mp3): rmtree(mp3)
         res = system(f'{self.cmd} "{wav}" "{mp3}"')
         if res == 0:
-            self.cnt.proceed()
+            self.count(s)
         else:
-            self.errors += 1
+            self.count(self.ST.errors)
 
-    def process(self, workload:list):
-        # print('process:', len(workload))
-        for wav, mp3 in workload:
-            self.launch(self.w2m, wav, mp3)
-            if self.outLimit():
-                # print('limit!')
-                break
+    def process(self, *work):
+        if self.outLimit(): return
+        self.cnt.proceed()
+        self.launch(self.w2m, *work)
 
     def transfer(self, rootWav:str, rootMp3:str):
         if self.chkDir(rootWav) + self.chkDir(rootMp3) > 0:
             exit(1)
         self.cnt.reset()
+        self.stats.clear()
         sw = StopWatch()
-        self.errors = 0
-
-        glWav = FF_XGlob(rootWav, '(*).wav')
-        glMp3 = FF_XGlob(rootMp3, '(*).mp3')
 
         self.launch(self.scanWav, rootWav)
         self.launch(self.scanMp3, rootMp3)
-        # dataWav = tuple(d for d in glWav)
-        # mapMp3 = { deMp3.rp:deMp3.fs for deMp3 in glMp3 }
         self.finalize()
 
         sw.stop()
-        self.info('analysis', sw.str_sec())
+        self.info('analysis', sw.str_ms())
+        print()
 
         for deWav in self.dataWav:
-            fsMp3 = self.mapMp3.get(deWav.rp)
+            mMp3 = self.mapMp3.get(self.dirKey(deWav))
             workload = []
-            if fsMp3:
-                # print('matched:', deWav.rp )
-                mMp3 = { key:fe for key, fe in fsMp3 }
-                # print('mMp3', len(mMp3))
-                for keyWav, feWav in deWav.fs:
-                    feMp3 = mMp3.get(keyWav)
-                    if feMp3:
-                        # print('found:', feMp3.path)
-                        if self.force or feWav.stat().st_mtime > feMp3.stat().st_mtime:
-                            workload.append((feWav.path, feMp3.path))
-                            # print('C1', feWav.path, '->', feMp3.path)
+            if mMp3:
+                for elWav in deWav.data:
+                    elMp3 = mMp3.get(self.fileKey(elWav))
+                    if elMp3:
+                        if self.force or elWav.mtime() > elMp3.mtime():
+                            self.process(elWav.path(), elMp3.path(), self.ST.replaced)
                     else:
-                        pathMp3 = join(rootMp3, deWav.rp, f'{keyWav}.mp3')
-                        # print('C2:', feWav.path, '->', pathMp3)
-                        workload.append((feWav.path, pathMp3))
+                        pathMp3 = join(rootMp3, deWav.relpath(), self.mp3Name(elWav))
+                        self.process(elWav.path(), pathMp3, self.ST.new)
             else:
-                dirMp3 = join(rootMp3, deWav.rp)
-                # print('check dir:', dirMp3)
+                dirMp3 = join(rootMp3, deWav.relpath())
                 self.mDir(dirMp3)
-                for keyWav, feWav in deWav.fs:
-                    pathMp3 = join(dirMp3, f'{keyWav}.mp3')
-                    # print('C3:', feWav.path, '->', pathMp3)
-                    workload.append((feWav.path, pathMp3))
+                for elWav in deWav.data:
+                    pathMp3 = join(dirMp3, self.mp3Name(elWav))
+                    self.process(elWav.path(), pathMp3, self.ST.new)
 
-            self.process(workload)
-            if self.outLimit(): break
+            if self.outLimit():
+                break
+            # self.process(workload)
 
         self.finalize()
+        if self.clean:
+            for deMp3 in self.dataMp3:
+                mWav = self.mapWav.get(self.dirKey(deMp3))
+                if mWav:
+                    for elMp3 in deMp3.data:
+                        elWav = mWav.get(self.fileKey(elMp3))
+                        if not elWav:
+                            self.count(self.ST.removed)
+                            remove(elMp3.path())
 
-        print()
         sw.stop()
-        self.info('errors', self.errors)
+        self.info('attempts', self.cnt.count())
+        for n, c in [(n.value, n.name) for n in self.ST]:
+            self.info(c, self.stats[n])
         self.info('elapsed time', sw.str_sec())
         self.info('average', sw.avrg_str_sec(self.cnt.count()))
 
@@ -168,7 +204,7 @@ if __name__ == '__main__':
 
     opts, args = docopts(__doc__, reqArgs=True, all=True)
 
-    converter = Wav2Mp3(quality=opts['q'], force=opts['f'], limit=opts['l'], numThreads=opts['t'])
+    converter = Wav2Mp3(quality=opts['q'], force=opts['f'], limit=opts['l'], numThreads=opts['t'], clean=opts['c'])
 
     while len(args) > 1:
         converter.transfer(*args[0:2])
