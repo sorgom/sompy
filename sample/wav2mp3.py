@@ -1,13 +1,6 @@
 """
 bulk wav to mp3 conversion
-requires lame.exe to be available within PATH
-
-steps
-- recurse all sub folders (sf)
-- transfer source sf/*.wav to destination sf/*.mp3
-    - if destination sf/*.mp3 does not exist
-    - if source sf/*.wav is newer
-    - if force overwrite -f is specified
+requires lame executable to be available within PATH
 
 usage: this script [options] <source folder> <destination folder>
 options
@@ -16,9 +9,8 @@ options
         kbps: 32 40 48 56 64 80 96 112 128 160 192 224 256 320
     -f  force overwrite existing mp3 files
         default: overwrites if wav is newer
-    -c  clean additional mp3 files in each directory with mp3 files
+    -c  clean mp3 files that have no source in wav folders with files
     -l  <int> limit of conversions per source / destination
-        (due to multi threading only a rough number)
     -t  <int> number of threads
     -h  this help
 """
@@ -39,7 +31,7 @@ from toType import toInt, toBool
 
 
 class Wav2Mp3(MtBase):
-    "the converter class"
+    "the wav2mp3 class"
 
     class ST(Enum):
         "enumeration for statistics"
@@ -53,7 +45,7 @@ class Wav2Mp3(MtBase):
         conv = 'lame'
         lame = which(conv)
         if lame is None:
-            print('no', conv, 'converter found on PATH.')
+            print('no', conv, 'wav2mp3 found on PATH.')
             exit(1)
         if quality:
             if quality in 'medium standard extreme insane 32 40 48 56 64 80 96 112 128 160 192 224 256 320':
@@ -66,7 +58,7 @@ class Wav2Mp3(MtBase):
 
         self.cmd = f'{lame} --quiet --preset {quality}'
 
-        self.ignoreCase = oname != 'posix'
+        self.ignoreCase = True # oname != 'posix'
 
         def mkDirKey():
             if self.ignoreCase: return lambda e : e.relpath().upper()
@@ -132,6 +124,7 @@ class Wav2Mp3(MtBase):
 
     def w2m(self, wav:str, mp3:str, s:ST):
         if isdir(mp3): rmtree(mp3)
+        # print(s.name, ':', mp3)
         res = system(f'{self.cmd} "{wav}" "{mp3}"')
         self.count(s if res == 0 else self.ST.errors)
 
@@ -149,17 +142,16 @@ class Wav2Mp3(MtBase):
 
         self.launch(self.scanWav, rootWav)
         self.launch(self.scanMp3, rootMp3)
-        self.finalize()
+        self.finish()
 
         sw.stop()
         self.info('scan', sw.str_ms())
         print()
 
-        self.cnt.show()
+        # self.cnt.show()
 
         for deWav in self.dataWav:
             mMp3 = self.mapMp3.get(self.dirKey(deWav))
-            workload = []
             if mMp3:
                 for elWav in deWav.data:
                     elMp3 = mMp3.get(self.fileKey(elWav))
@@ -178,9 +170,8 @@ class Wav2Mp3(MtBase):
 
             if self.outLimit():
                 break
-            # self.process(workload)
 
-        self.finalize()
+        self.finish()
         if self.clean:
             for deMp3 in self.dataMp3:
                 mWav = self.mapWav.get(self.dirKey(deMp3))
@@ -203,8 +194,8 @@ if __name__ == '__main__':
 
     opts, args = docopts(__doc__, reqArgs=True, all=True)
 
-    converter = Wav2Mp3(quality=opts['q'], force=opts['f'], limit=opts['l'], numThreads=opts['t'], clean=opts['c'])
+    wav2mp3 = Wav2Mp3(quality=opts['q'], force=opts['f'], limit=opts['l'], numThreads=opts['t'], clean=opts['c'])
 
     while len(args) > 1:
-        converter.transfer(*args[0:2])
+        wav2mp3.transfer(*args[0:2])
         args = args[2:]

@@ -23,7 +23,7 @@ class MtBase(object):
         self._threads[n] = th
         th.start()
 
-    def finalize(self):
+    def finish(self):
         for th in self._threads:
             if th is not None:
                 th.join()
@@ -72,8 +72,8 @@ if __name__ == '__main__':
             for n in range(1, 11):
                 print(f'launch {n:>2}')
                 self.launch(self.work, f'call {n + 100}')
-            print('finalize')
-            self.finalize()
+            print('finish')
+            self.finish()
 
     d = Demo(5)
     d.run()

@@ -71,7 +71,7 @@ class MPOO(object):
         self.threads[n] = th
         th.start()
 
-    def finalize(self):
+    def finish(self):
         print('finalizing ..')
         for th in self.threads:
             if th is not None:
@@ -90,7 +90,7 @@ class MPOO(object):
 
         print('currdir:', getcwd())
 
-        self.finalize()
+        self.finish()
 
 if __name__ == '__main__':
     mp = MPOO()
