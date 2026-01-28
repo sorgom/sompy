@@ -10,7 +10,7 @@ def chkDir(dir):
     if not isdir(dir):
         raise(NoDir(dir))
 
-def isCaseSensitive(dir):
+def getCaseSense(dir):
     with TemporaryDirectory(dir=dir) as td:
         tp = Path(td)
         (tp / 'x').touch()
@@ -22,6 +22,6 @@ if __name__ == '__main__':
     for arg in argv[1:]:
         try:
             chkDir(arg)
-            print('isCaseSensitive', isCaseSensitive(arg), arg)
+            print('case sense', f'{str(getCaseSense(arg)):<5}:', arg)
         except Exception as e:
             print(e)

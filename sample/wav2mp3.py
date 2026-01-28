@@ -148,8 +148,6 @@ class Wav2Mp3(MtBase):
         self.info('scan', sw.str_ms())
         print()
 
-        # self.cnt.show()
-
         for deWav in self.dataWav:
             mMp3 = self.mapMp3.get(self.dirKey(deWav))
             if mMp3:
