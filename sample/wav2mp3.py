@@ -40,7 +40,7 @@ class Wav2Mp3(MtBase):
         removed = auto()
         errors = auto()
 
-    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None):
+    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None, ignoreCase=True):
         super().__init__(numThreads)
         conv = 'lame'
         lame = which(conv)
@@ -58,7 +58,7 @@ class Wav2Mp3(MtBase):
 
         self.cmd = f'{lame} --quiet --preset {quality}'
 
-        self.ignoreCase = True # oname != 'posix'
+        self.ignoreCase = ignoreCase  or oname != 'posix'
 
         def mkDirKey():
             if self.ignoreCase: return lambda e : e.relpath().upper()
