@@ -40,7 +40,7 @@ class Wav2Mp3(MtBase):
         removed = auto()
         errors = auto()
 
-    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None, ignoreCase=True):
+    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None):
         super().__init__(numThreads)
         conv = 'lame'
         lame = which(conv)
@@ -58,26 +58,17 @@ class Wav2Mp3(MtBase):
 
         self.cmd = f'{lame} --quiet --preset {quality}'
 
-        self.ignoreCase = ignoreCase  or oname != 'posix'
-
-        def mkDirKey():
-            if self.ignoreCase: return lambda e : e.relpath().upper()
-            else: return lambda e : e.relpath()
 
         rx = re.compile(r'^(.*)\..*?$')
-        def mkFileKey():
-            if self.ignoreCase: return lambda e : rx.sub(r'\1', e.name()).upper()
-            else: return lambda e : rx.sub(r'\1', e.name())
-
         def mkMp3Name():
             return lambda e : rx.sub(r'\1.mp3', e.name())
 
-        self.dirKey     = mkDirKey()
-        self.fileKey    = mkFileKey()
+        self.keyFunc = lambda c : rx.sub(r'\1', c)
+
         self.mp3Name    = mkMp3Name()
 
         self.force  = toBool(force)
-        self.limit  = toInt(limit) if limit else None
+        self.limit  = max(0, toInt(limit)) if limit else None
         self.clean  = toBool(clean)
         self.cnt    = ProgressNum('attempt no.', 15, 12)
 
@@ -87,37 +78,28 @@ class Wav2Mp3(MtBase):
         self.info('limit', self.limit if self.limit else '--')
         print()
 
-    @staticmethod
-    def chkDir(dir):
-        "check if folder exists"
-        if not isdir(dir):
-            print('no directory:', dir)
-            return 1
-        return 0
-
     def count(self, s:ST):
         self.stats[s.value] += 1
 
     def info(self, *args):
         self.cnt.info(*args)
 
-    def mkMap(self, data:tuple):
-        return { self.dirKey(de):{self.fileKey(fe):fe for fe in de.data} for de in data }
-
     def scanWav(self, rootWav):
-        glWav = FF_Re(rootWav, r'^.*\.wav$', ignoreCase=self.ignoreCase)
-        self.dataWav = tuple(d for d in glWav)
-        if self.clean: self.mapWav = self.mkMap(self.dataWav)
+        self.dataWav, self.mapWav = FF_Re(rootWav, r'^.*\.wav$', ignoreCase=True).mapping(self.keyFunc)
 
-    def scanMp3(self, rootMp3):
-        glMp3 = FF_Re(rootMp3, r'^.*\.mp3$', ignoreCase=self.ignoreCase)
-        self.dataMp3 = tuple(d for d in glMp3)
-        self.mapMp3 = self.mkMap(self.dataMp3)
+    def scanMp3(self, rootMp3, listEmpty=False):
+        self.dataMp3, self.mapMp3 = FF_Re(rootMp3, r'^.*\.mp3$', listEmpty=listEmpty, ignoreCase=True).mapping(self.keyFunc)
 
     @staticmethod
     def mDir(dir):
         if isfile(dir): remove(dir)
         makedirs(dir, exist_ok=True)
+
+    @staticmethod
+    def rmDir(dir):
+        print('remove:', dir)
+        if isfile(dir): remove(dir)
+        if isdir(dir): rmtree(dir)
 
     def outLimit(self):
         return self.limit and self.cnt >= self.limit
@@ -134,25 +116,29 @@ class Wav2Mp3(MtBase):
         self.launch(self.w2m, *work)
 
     def transfer(self, rootWav:str, rootMp3:str):
-        if self.chkDir(rootWav) + self.chkDir(rootMp3) > 0:
-            exit(1)
         self.cnt.reset()
         self.stats.clear()
         sw = StopWatch()
 
         self.launch(self.scanWav, rootWav)
-        self.launch(self.scanMp3, rootMp3)
+        self.launch(self.scanMp3, rootMp3, True)
         self.finish()
 
         sw.stop()
         self.info('scan', sw.str_ms())
         print()
 
+        if self.force and not self.limit:
+            for deMp3 in self.dataMp3:
+                if self.mapWav.get(deMp3):
+                    self.rmDir(deMp3.path())
+            self.scanMp3(rootMp3)
+
         for deWav in self.dataWav:
-            mMp3 = self.mapMp3.get(self.dirKey(deWav))
+            mMp3 = self.mapMp3.get(deWav)
             if mMp3:
                 for elWav in deWav.data:
-                    elMp3 = mMp3.get(self.fileKey(elWav))
+                    elMp3 = mMp3.get(elWav)
                     if elMp3:
                         if self.force or elWav.mtime() > elMp3.mtime():
                             self.process(elWav.path(), elMp3.path(), self.ST.replaced)
@@ -169,16 +155,17 @@ class Wav2Mp3(MtBase):
             if self.outLimit():
                 break
 
-        self.finish()
-        if self.clean:
-            for deMp3 in self.dataMp3:
-                mWav = self.mapWav.get(self.dirKey(deMp3))
-                if mWav:
-                    for elMp3 in deMp3.data:
-                        elWav = mWav.get(self.fileKey(elMp3))
-                        if not elWav:
-                            self.count(self.ST.removed)
-                            remove(elMp3.path())
+            self.finish()
+        # if self.clean:
+        #     for deMp3 in self.dataMp3:
+        #         mWav = self.mapWav.get(deMp3)
+        #         if mWav:
+        #             for elMp3 in deMp3.data:
+        #                 elWav = mWav.get(elMp3)
+        #                 if not elWav:
+        #                     self.count(self.ST.removed)
+        #                     remove(elMp3.path())
+        #                     # print(f'remove({elMp3.path()})')
 
         sw.stop()
         self.info('attempts', self.cnt.count())

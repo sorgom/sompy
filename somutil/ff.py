@@ -3,6 +3,8 @@
 from os import scandir, DirEntry, stat
 from os.path import join, realpath, abspath
 
+from dirTools import *
+
 class FF_Entry:
     def __init__(self, offset:int, entry:DirEntry, data=None):
         self.relpath = self.__mkRel(offset)
@@ -27,8 +29,45 @@ class FF_Base:
             self.is_dir = lambda : True
             self.stat   = lambda : stat(self.path)
 
+    class __MapD():
+        class __MapF():
+            def __init__(self, entries:tuple, isCaseSense:bool, keyFunc):
+                if isCaseSense:
+                    self.__keyFunc = lambda e : keyFunc(e.name())
+                else:
+                    self.__keyFunc = lambda e : keyFunc(e.name()).upper()
+
+                self.__data = {self.__keyFunc(e):e for e in entries}
+
+            def get(self, entry):
+                return self.__data.get(self.__keyFunc(entry))
+
+            def __len__(self):
+                return len(self.__data)
+
+            def keys(self):
+                return self.__data.keys()
+
+        def __init__(self, entries:tuple, isCaseSense:bool, keyFunc):
+            if isCaseSense:
+                self.__keyFunc = lambda e : e.relpath()
+            else:
+                self.__keyFunc = lambda e : e.relpath().upper()
+            self.__data = {self.__keyFunc(de):self.__MapF(de.data, isCaseSense, keyFunc) for de in entries}
+
+        def get(self, entry):
+            return self.__data.get(self.__keyFunc(entry))
+
+        def __len__(self):
+            return len(self.__data)
+
+        def keys(self):
+            return self.__data.keys()
+
+
     def __init__(self, root:str, listEmpty=False):
         self.__root     = realpath(abspath(root))
+        chkDir(self.__root)
         self._isF       = lambda e: e.is_file(follow_symlinks=False)
         self._isD       = lambda e: e.is_dir (follow_symlinks=False)
 
@@ -46,6 +85,8 @@ class FF_Base:
         offset = len(join(self.__root, ''))
 
         self._gen = self.__mkGen(offset)
+
+        self.__caseSense = None
 
         self.__reset()
 
@@ -66,6 +107,12 @@ class FF_Base:
 
     def dircnt(self):
         return self.__dircnt
+
+    def mapping(self, keyFunc=lambda x : x):
+        d = tuple(self.__iter__())
+        m = self.__MapD(d, self.isCaseSense(), keyFunc)
+        return d, m
+
 
     def __mkGen(self, offset:int):
         return lambda e, *p: FF_Entry(offset, e, *p)
@@ -95,6 +142,10 @@ class FF_Base:
     def __iter__(self):
         self.__reset()
         for x in self.__recDirs(self.__StartEntry(self.__root)): yield x
+
+    def isCaseSense(self):
+        if self.__caseSense is None: self.__caseSense = getCaseSense(self.__root)
+        return self.__caseSense
 
 import re
 class FF_Re(FF_Base):
