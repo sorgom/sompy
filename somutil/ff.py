@@ -1,5 +1,6 @@
 """some find file classes"""
 
+from collections.abc import MutableMapping
 from os import scandir, DirEntry, stat
 from os.path import join, realpath, abspath
 
@@ -21,49 +22,6 @@ class FF_Entry:
 
 class FF_Base:
     """find files base class"""
-
-    class __StartEntry:
-        def __init__(self, root, name=''):
-            self.name   = name
-            self.path   = root
-            self.is_dir = lambda : True
-            self.stat   = lambda : stat(self.path)
-
-    class __MapD():
-        class __MapF():
-            def __init__(self, entries:tuple, isCaseSense:bool, keyFunc):
-                if isCaseSense:
-                    self.__keyFunc = lambda e : keyFunc(e.name())
-                else:
-                    self.__keyFunc = lambda e : keyFunc(e.name()).upper()
-
-                self.__data = {self.__keyFunc(e):e for e in entries}
-
-            def get(self, entry):
-                return self.__data.get(self.__keyFunc(entry))
-
-            def __len__(self):
-                return len(self.__data)
-
-            def keys(self):
-                return self.__data.keys()
-
-        def __init__(self, entries:tuple, isCaseSense:bool, keyFunc):
-            if isCaseSense:
-                self.__keyFunc = lambda e : e.relpath()
-            else:
-                self.__keyFunc = lambda e : e.relpath().upper()
-            self.__data = {self.__keyFunc(de):self.__MapF(de.data, isCaseSense, keyFunc) for de in entries}
-
-        def get(self, entry):
-            return self.__data.get(self.__keyFunc(entry))
-
-        def __len__(self):
-            return len(self.__data)
-
-        def keys(self):
-            return self.__data.keys()
-
 
     def __init__(self, root:str, listEmpty=False):
         self.__root     = realpath(abspath(root))
@@ -88,7 +46,7 @@ class FF_Base:
 
         self.__caseSense = None
 
-        self.__reset()
+        self.reScan()
 
     def addCheckTF(self, func):
         self._checksTF.append(func)
@@ -108,11 +66,11 @@ class FF_Base:
     def dircnt(self):
         return self.__dircnt
 
-    def mapping(self, keyFunc=lambda x : x):
-        d = tuple(self.__iter__())
-        m = self.__MapD(d, self.isCaseSense(), keyFunc)
-        return d, m
+    def data(self):
+        return self.__data
 
+    def genMap(self, keyFuncF=None, keyFuncD=None):
+        return self._FF_Map_D(self.__data, keyFuncF, keyFuncD)
 
     def __mkGen(self, offset:int):
         return lambda e, *p: FF_Entry(offset, e, *p)
@@ -139,13 +97,67 @@ class FF_Base:
                 self.__errcnt += 1
                 pass
 
-    def __iter__(self):
+    def reScan(self):
         self.__reset()
-        for x in self.__recDirs(self.__StartEntry(self.__root)): yield x
+        self.__data = tuple(de for de in self.__recDirs(self.__StartEntry(self.__root)))
+
+    def __iter__(self):
+        for de in self.__data: yield de
 
     def isCaseSense(self):
         if self.__caseSense is None: self.__caseSense = getCaseSense(self.__root)
         return self.__caseSense
+
+    class __StartEntry:
+        def __init__(self, root, name=''):
+            self.name   = name
+            self.path   = root
+            self.is_dir = lambda : True
+            self.stat   = lambda : stat(self.path)
+
+    class _FF_Map(MutableMapping):
+        def __init__(self, keyFunc):
+            self.__keyFunc = keyFunc
+            self._storage = {}
+
+        def __getitem__(self, e):
+            return self._storage[self.__keyFunc(e)]
+
+        def __setitem__(self, e, value):
+            self._storage[self.__keyFunc(e)] = value
+
+        def __delitem__(self, e):
+            del self._storage[self.__keyFunc(e)]
+
+        def __iter__(self):
+            pass
+
+        def __len__(self):
+            return len(self._storage)
+
+        def get(self, e, default=None):
+            try:
+                return self[e]
+            except KeyError:
+                return default
+
+    class _FF_Map_F(_FF_Map):
+        def __init__(self, entries:tuple, keyFuncF=None):
+            if keyFuncF is None:
+                keyFunc = lambda e : e.name()
+            else:
+                keyFunc = lambda e : keyFuncF(e.name())
+            super().__init__(keyFunc)
+            self._storage = {keyFunc(e):e for e in entries}
+
+    class _FF_Map_D(_FF_Map):
+        def __init__(self, entries:tuple, keyFuncF=None, keyFuncD=None):
+            if keyFuncD is None:
+                keyFunc = lambda e : e.relpath()
+            else:
+                keyFunc = lambda e : keyFuncD(e.relpath())
+            super().__init__(keyFunc)
+            self._storage = {keyFunc(e):FF_Base._FF_Map_F(e.data, keyFuncF) for e in entries}
 
 import re
 class FF_Re(FF_Base):

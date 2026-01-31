@@ -2,30 +2,28 @@ import sompy
 from ff import *
 from stopWatch import StopWatch
 
-from os.path import basename, dirname, isdir
 from os import makedirs, chdir
+from os.path import basename, dirname, isdir, abspath
+from pathlib import Path
 from shutil import rmtree
+from tempfile import TemporaryDirectory
+from time import sleep
 from typing import Type
 
 myDir = dirname(__file__)
-testDir = f'tmp_{basename(__file__)}_'
-testDirs = (testDir, 'Lola', '$sys')
+testDirs = ('wumpel', 'Lola', '$sys')
 testFiles = ('wumpel.py', 'rumpel.PY', 'some.jpg')
 testFuncs = (lambda c : c, lambda c : c.upper(), lambda c : c + '.$sys')
 
-def touch(fn):
-    with open(fn, 'w') as fh:
-        fh.write('test only')
+tmp = TemporaryDirectory(dir=myDir)
+testDir = tmp.name
+tp = Path(tmp.name)
+for subd, func in zip(testDirs, testFuncs):
+    tp = tp / subd
+    tp.mkdir()
+    for fn in testFiles:
+        (tp / func(fn)).touch()
 
-chdir(myDir)
-if isdir(testDir): rmtree(testDir)
-
-for dir, func in zip(testDirs, testFuncs):
-    makedirs(dir)
-    chdir(dir)
-    for fn in testFiles: touch(func(fn))
-
-chdir(myDir)
 
 def test(cls: Type[FF_Base], *params, listEmpty=False, ignoreCase=False):
     def pr(what, *cont):
@@ -43,6 +41,9 @@ def test(cls: Type[FF_Base], *params, listEmpty=False, ignoreCase=False):
         dirs.append(f'"{ffe.relpath()}"')
         files.extend(fe.name() for fe in ffe.data)
     sw.stop()
+
+    md = ff.genMap()
+    pr('map', type(md).__name__)
 
     pr('folders visited', ff.dircnt())
     pr('folders listed', len(dirs))

@@ -9,14 +9,28 @@ options
         kbps: 32 40 48 56 64 80 96 112 128 160 192 224 256 320
     -f  force overwrite existing mp3 files
         default: overwrites if wav is newer
-    -c  clean mp3 files that have no source in wav folders with files
     -l  <int> limit of conversions per source / destination
     -t  <int> number of threads
     -h  this help
+
+
+algorithm:
+go through source dirs, check target dirs
+if target dir not found in map:
+    remove target dir if exists
+else:
+    go through source files
+    if target file not found:
+        remove target file if exists
+
+this ensures that target files and dirs have same case as source ones
+
+no cleaning of target folders
+
 """
 from collections import Counter
 from enum import Enum, auto
-from os import remove, makedirs, system, name as oname
+from os import remove, makedirs, system
 from os.path import join, isdir, isfile
 from shutil import which, rmtree
 import re
