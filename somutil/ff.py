@@ -7,17 +7,18 @@ from os.path import join, realpath, abspath
 from dirTools import *
 
 class FF_Entry:
+    """wrapper for os.DirEntry"""
     def __init__(self, offset:int, entry:DirEntry, data=None):
-        self.relpath = self.__mkRel(offset)
-        self.entry   = entry
-        self.data    = data
+        self.relpath = lambda : self.entry.path[offset:]
         self.stat    = lambda : self.entry.stat()
         self.name    = lambda : self.entry.name
         self.path    = lambda : self.entry.path
         self.mtime   = lambda : self.entry.stat().st_mtime
+        self.entry   = entry
+        self.data    = data
 
-    def __mkRel(self, offset):
-        return lambda : self.entry.path[offset:]
+    # def __mkRel(self, offset):
+    #     return lambda : self.entry.path[offset:]
 
 
 class FF_Base:
@@ -65,9 +66,6 @@ class FF_Base:
 
     def dircnt(self):
         return self.__dircnt
-
-    def data(self):
-        return self.__data
 
     def genMap(self, keyFuncF=None, keyFuncD=None):
         return self._FF_Map_D(self.__data, keyFuncF, keyFuncD)

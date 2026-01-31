@@ -42,8 +42,12 @@ def test(cls: Type[FF_Base], *params, listEmpty=False, ignoreCase=False):
         files.extend(fe.name() for fe in ffe.data)
     sw.stop()
 
-    md = ff.genMap()
-    pr('map', type(md).__name__)
+    # md = ff.genMap()
+    # for de in ff:
+    #     mf = md.get(de)
+    #     print
+    #     for fe in de.data:
+    #         print(mf.get(fe))
 
     pr('folders visited', ff.dircnt())
     pr('folders listed', len(dirs))
