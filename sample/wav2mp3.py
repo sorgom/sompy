@@ -11,23 +11,17 @@ options
         default: overwrites if wav is newer
     -l  <int> limit of conversions per source / destination
     -t  <int> number of threads
-    -R  rename wav files according to info.txt
     -h  this help
 
-
 algorithm:
-go through source dirs, check target dirs
-if target dir not found in map:
-    remove target dir if exists
-else:
-    go through source files
-    if target file not found:
-        remove target file if exists
+TODO: clean redundant mp3 folders:
+go through mp3
+if equivalent wav folder found:
+clean mp3 files without wav equivalent
 
-this ensures that target files and dirs have same case as source ones
-
-no cleaning of target folders
-
+go through source folders, check target folders
+if exists, check source files: new or overwrite
+if not: create folder, all files new
 """
 from collections import Counter
 from enum import Enum, auto
@@ -55,7 +49,7 @@ class Wav2Mp3(MtBase):
         removed = auto()
         errors = auto()
 
-    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None, rename=False):
+    def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None):
         super().__init__(numThreads)
         conv = 'lame'
         lame = which(conv)
