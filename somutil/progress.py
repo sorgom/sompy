@@ -3,6 +3,8 @@ simple progress indication
 TODO: Progress base class
 """
 
+from sys import stderr
+
 class Progress():
     def __init__(self, *p):
         self.__cnt = 0
@@ -44,14 +46,14 @@ class ProgressWheel(Progress):
     def _mkOut(self, *p):
         signs = '—\\|/'
         mod = len(signs)
-        return lambda cnt : print(f'{signs[cnt % mod]:>3}', end="\r")
+        return lambda cnt : print(f'{signs[cnt % mod]:>3}', end="\r", file=stderr)
 
 class ProgressDots(Progress):
     def __init__(self, width:int=40, dot:str='.'):
         super().__init__(max(5, width), dot)
 
     def _mkOut(self, width, dot):
-        return lambda cnt : print(dot, end=('' if cnt % width else "\n"), flush = True)
+        return lambda cnt : print(dot, end=('' if cnt % width else "\n"), flush=True, file=stderr)
 
 class ProgressNum(Progress):
     def __init__(self, cap:str='count', w1:int=10, w2:int=9):
@@ -63,7 +65,7 @@ class ProgressNum(Progress):
         self.info = mkInfo()
 
     def _mkOut(self, cap, w1, w2):
-        return lambda cnt: print(f'{cap:<{w1}}:{cnt:>{w2}d}', end="\r")
+        return lambda cnt: print(f'{cap:<{w1}}:{cnt:>{w2}d}', end="\r", file=stderr)
 
     def show(self):
         self.proceed(0)
