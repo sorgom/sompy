@@ -43,20 +43,37 @@ class dupFind():
 
         for de in ff:
             for fe in de.data:
-                pw.proceed()
                 reg[fe.name()].append(fe)
 
         print('analysis..')
+        cnt_name = 0
+        cnt_size = 0
+        cnt_hash = 0
+
         for fn, fs in reg.items():
             pw.proceed()
+            # more two or more files with same name
             if len(fs) > 1:
-                hh = defaultdict(list)
+                cnt_name += len(fs) - 1
+                # check for same file size
+                hs = defaultdict(list)
                 for fe in fs:
-                    hh[self.hash(fe)].append(fe)
-                for h, es in hh.items():
-                # for es in hh.values():
-                    if len(es) > 1:
-                        print(fn, *(f.path() for f in es), sep="\n- ")
+                    hs[fe.stat().st_size].append(fe)
+                for ls in hs.values():
+                    if len(ls) > 1:
+                        cnt_size += len(ls) - 1
+                        # check for same file checksum
+                        hh = defaultdict(list)
+                        for es in ls:
+                            hh[self.hash(es)].append(es)
+                            for lh in hh.values():
+                                if len(lh) > 1:
+                                    cnt_hash += len(lh) - 1
+                                    print(f'> {fn}', *(eh.path() for eh in lh), sep="\n- ")
+
+        print(f'name duplicates:{cnt_name:>6}')
+        print(f'size duplicates:{cnt_size:>6}')
+        print(f'hash duplicates:{cnt_hash:>6}')
 
 if __name__ == '__main__':
     from docopts import docopts
