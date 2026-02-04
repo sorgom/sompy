@@ -56,6 +56,9 @@ class FF_Base:
     def addCheckXD(self, func):
         self._checksXD.append(func)
 
+    def root(self):
+        return self.__root
+
     def errcnt(self):
         self.__chkData()
         return self.__errcnt

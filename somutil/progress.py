@@ -70,6 +70,25 @@ class ProgressNum(Progress):
     def show(self):
         self.proceed(0)
 
+class ProgressPercent(Progress):
+    def __init__(self, total):
+        super().__init__(total)
+
+        def mkInfo():
+            return lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
+
+        self.info = mkInfo()
+
+    def _mkOut(self, total):
+        if total > 0:
+            fac = 100 / total
+            return lambda cnt: print(f'{cnt * fac:8.02f}%', end="\r", file=stderr)
+        else:
+            return lambda cnt: print(f'{cnt:>6}', end="\r", file=stderr)
+
+    def show(self):
+        self.proceed(0)
+
 if __name__ == '__main__':
     from time import sleep
 
@@ -86,3 +105,4 @@ if __name__ == '__main__':
     sleep(1)
     test(pg)
     pg.info('done', pg.count())
+    test(ProgressPercent(15))

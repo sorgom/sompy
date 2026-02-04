@@ -1,4 +1,4 @@
-from hashlib import file_digest, algorithms_available
+from hashlib import file_digest, algorithms_available, new as new_hash
 from sys import argv
 from glob import glob
 from os.path import isfile
@@ -12,4 +12,13 @@ for x in argv[1:]:
                 digest = file_digest(fh, 'sha1')
                 print(digest.hexdigest())
 
-print('available:', sorted(algorithms_available))
+# print('available:', sorted(algorithms_available))
+
+dirs = (
+    'wumpel',
+    'lola'
+)
+
+h = new_hash('sha1')
+for d in sorted(dirs): h.update(d.encode('utf-8'))
+print(h.hexdigest())
