@@ -5,6 +5,7 @@ usage: this script options
 options
     -s  <folder> scan folder
     -p  <file> process scan results text file
+        -a <rel path> auto prefer path
     -h  this help
 """
 from collections import defaultdict
@@ -19,9 +20,9 @@ from progress import ProgressPercent
 class dupFind():
     "the duplicate finder class"
 
-    def __init__(self, hasType:str='sha1'):
-        self.fhash = lambda fh: file_digest(fh, hasType).hexdigest()
-        self.newhash = lambda : new_hash(hasType)
+    def __init__(self, hashType:str='sha1'):
+        self.fhash = lambda fh: file_digest(fh, hashType).hexdigest()
+        self.newhash = lambda : new_hash(hashType)
         pass
 
     def hash(self, fe):
@@ -31,15 +32,15 @@ class dupFind():
         except:
             return None
 
-    def scan(self, root:str):
+    def scan(self, root:str, auto=None):
         try:
             ff = FF_Base(root)
         except Exception as e:
             print(e)
             return
 
-        ff.addCheckXD(lambda de : de.name() in ['git', '.git', 'Adobe'])
-        ff.addCheckXF(lambda fe : fe.name() in ['id_rsa', 'id_rsa.pub', 'known_hosts', 'index.html', 'index.htm', 'desktop.ini'])
+        ff.addCheckXD(lambda de : de.name() in ['git', '.git', 'Adobe', 'installers', '$RECYCLE.BIN', 'MyDownloads'])
+        ff.addCheckXF(lambda fe : fe.name() in ['id_rsa', 'id_rsa.pub', 'known_hosts', 'index.html', 'index.htm', 'index.php', 'desktop.ini'])
 
         reg = defaultdict(list)
 
@@ -125,13 +126,18 @@ class dupFind():
                 for n, (dir, files) in enumerate(choice):
                     print(f'{n+1:>2}: {len(files):>5}: {dir}')
                 print('select number to keep or enter to skip: ', end='')
-                try:
-                    n = int(input())
+                c = input()
+                if c.isdigit():
+                    n = int(c)
                     if n > 0 and n <= len(choice):
                         s = n - 1
                         break
-                except:
-                    print('skip')
+                    else: continue
+                elif c and c in 'xX':
+                    print('exit')
+                    exit()
+                else:
+                    print()
                     break
             if s is None: return
             print('selected:', s)
