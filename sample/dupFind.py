@@ -26,10 +26,10 @@ class dupFind():
         self.newhash = lambda : new_hash(hashType)
         pass
 
-    def hash(self, fe):
+    def checksum(self, fe):
         try:
             with open(fe.path(), 'rb') as fh:
-                return self.fhash(fh)
+                return '.'.join((self.fhash(fh), fe.name()))
         except:
             return None
 
@@ -40,6 +40,11 @@ class dupFind():
         except Exception as e:
             print(e)
             return
+
+        #   mapping of file objects as hashes
+        #   hash -> object
+        #
+
 
         # ff.addCheckXD(lambda de : de.name() in ('git', 'git_old', '.git', 'Adobe', 'installers', '$RECYCLE.BIN', 'MyDownloads', 'cadul', '_Material-Sammlungen'))
         # ff.addCheckXF(lambda fe : fe.name() in ('id_rsa', 'id_rsa.pub', 'known_hosts', 'index.html', 'index.htm', 'index.php', 'desktop.ini'))
@@ -54,6 +59,26 @@ class dupFind():
             for fe in de.data:
                 reg[fe.name()].append(fe)
 
+        print('all file entries:', len(reg))
+
+        reg = { fn:fs for fn, fs in reg.items() if len(fs) > 1}
+
+        print('dup file entries:', len(reg))
+
+        # folder -> { folders with common files }
+        # path -> { paths, ... }
+        hDirs = defaultdict(set)
+
+        # folder -> { file checksums }
+        # path -> { checksum, .... }
+        hDirChecksums = defaultdict(set)
+
+        # check sum  -> file name
+        # checksum -> basename fo file
+        # must be checked for duplicate checksum
+        hChecksum = dict()
+
+
         pp = ProgressPercent(len(reg))
 
         print('analysis..')
@@ -61,6 +86,48 @@ class dupFind():
         cnt_size = 0
         cnt_hash = 0
         cnt_byte = 0
+
+        for fn, ln in reg.items():
+            pp.proceed()
+            cnt_name += len(ln)
+            #   separate into file size
+            hs = defaultdict(list)
+            for en in ln:
+                hs[en.stat().st_size].append(en)
+            #   filter entries with less than 2
+            for sz, ls in hs.items():
+                if len(ls) < 2: continue
+                #   separate into checksum identity
+                hc = defaultdict(list)
+                for es in ls:
+                    cs = self.checksum(es)
+                    if cs is None: continue
+                    #   check for checksum entry
+                    hc[cs].append(es)
+                for cs, lc in hc.items():
+                    if len(lc) < 2: continue
+                    hChecksum[cs] = lc[0].name()
+                    dirs = list()
+                    for ec in lc:
+                        dir = dirname(ec.path())
+                        hDirChecksums[dir].add(cs)
+                        dirs.append(dir)
+                    for n, dir in enumerate(sorted(dirs)):
+                        for dir2 in dirs[n + 1:]:
+                            hDirs[dir].add(dir2)
+
+        for dir1, others in hDirs.items():
+            s1 = hDirChecksums[dir1]
+            for dir2 in others:
+                s2 = hDirChecksums[dir2]
+                sc = s1 & s2
+                if not sc: continue
+                fs = tuple(hChecksum[cs] for cs in sc)
+                print(dir1, dir2)
+                print(*fs)
+
+
+        return
 
         for fn, fs in reg.items():
             pp.proceed()
