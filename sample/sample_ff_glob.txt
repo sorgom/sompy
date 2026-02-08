@@ -1,0 +1,27 @@
+#   exclude directories patterns
+> XD
+git
+git_old
+.git
+Adobe
+installers
+$RECYCLE.BIN
+MyDownloads
+drivers
+cadul
+_Material-Sammlungen
+
+#   exclude files patterns
+    >   XF
+id_rsa
+id_rsa.pub
+known_hosts
+index.(?:html?|php)
+desktop.ini
+
+#   take directories patterns
+> TD
+
+
+#   take files patterns
+>TF
