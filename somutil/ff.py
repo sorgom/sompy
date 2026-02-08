@@ -202,19 +202,44 @@ class FF_Re(FF_Base):
         return lambda e : rx.match(e.name())
 
 from xglob import XGlob
+from itertools import batched
+
 class FF_XGlob(FF_Re):
     """
     find files (and dirs) using XGlob notation
 
     """
-    def __init__(self, root:str, xgTF=None, xgXF=None, xgTD=None, xgXD=None, listEmpty=False, ignoreCase=False):
+    def __init__(self, root:str, xgTF=None, xgXF=None, xgTD=None, xgXD=None, listEmpty=False, ignoreCase=False, xglobFile=None):
+        if xglobFile:
+            xgTF, xgXF, xgTD, xgXD = self.f2xglob(xglobFile)
+
         xg = XGlob()
         tr = lambda x : xg.glob2rp(x)
         super().__init__(root, tr(xgTF), tr(xgXF), tr(xgTD), tr(xgXD), listEmpty, ignoreCase)
 
+    @staticmethod
+    def f2xglob(fp:str):
+        chkFile(fp)
+        with open(fp, 'r') as fh:
+            #   multiple emty lines
+            txt = re.sub(r'\n{2,}', '\n',
+                    #   comments
+                    re.sub(r'^#.*', '',
+                        #   leading and tailing line spaces
+                        re.sub(r'(?:^ +| +$)', '',
+                                #   content without tabs
+                                fh.read().strip().replace("\t", ' '), flags=re.M),
+                        flags=re.M))
+            #   split into sections
+            items = re.split(r'^> *(.+)', txt, flags=re.M)[1:]
+            items = tuple((key, cont.strip()) for (key, cont) in batched(items, 2))
+            map = {key.upper():tuple(cont.split("\n")) for (key, cont) in items if cont}
+            return tuple(map.get(c) for c in ('TF', 'XF', 'TD', 'XD'))
+
+
 if __name__ == '__main__':
     from sys import argv
-    if len(argv) < 1: exit()
+    if len(argv) < 2: exit()
     from stopWatch import StopWatch
 
     sw = StopWatch()
