@@ -1,22 +1,25 @@
 """
 find duplicate files
 
-usage1: this script -s folder
-usage2: this script -p file [preferred folders ...]
+usage1: this script -s folder [options]
+usage2: this script -i
 options
     -s  <folder> scan folder
-    -p  <file> process scan results text file
+    -i  interactively process scan results
     -f  <file> use xglobs from file for scan
+    -b  <file> binary scan results storage file
     -h  this help
 """
 from collections import defaultdict
 from hashlib import file_digest, new as new_hash
-from os.path import dirname, join
+from os.path import dirname, join, abspath
+from pickle import dump as pdump, load as pload
 import re
 
 import sompy
-from ff import FF_Base, FF_Re, FF_XGlob
+from ff import FF_XGlob
 from progress import ProgressPercent
+from dirTools import chkFile, chkDir
 
 class dupFind():
     "the duplicate finder class"
@@ -33,21 +36,21 @@ class dupFind():
         except:
             return None
 
-    def scan(self, root:str, xglobFile=None):
+    @staticmethod
+    def pklName(fname=None):
+        if fname is None:
+            return f'{__file__}.pkl'
+        fname = re.sub(r'^(.*)\.pkl', r'\1', fname, flags=re.I)
+        return abspath(f'{fname}.pkl')
+
+    def scan(self, root:str, xglobFile=None, pklOut=None):
         try:
-            print('scan with:', xglobFile)
             ff = FF_XGlob(root, xglobFile=xglobFile)
+            pklOut = self.pklName(pklOut)
+            chkDir(dirname(pklOut))
         except Exception as e:
             print(e)
             return
-
-        #   mapping of file objects as hashes
-        #   hash -> object
-        #
-
-
-        # ff.addCheckXD(lambda de : de.name() in ('git', 'git_old', '.git', 'Adobe', 'installers', '$RECYCLE.BIN', 'MyDownloads', 'cadul', '_Material-Sammlungen'))
-        # ff.addCheckXF(lambda fe : fe.name() in ('id_rsa', 'id_rsa.pub', 'known_hosts', 'index.html', 'index.htm', 'index.php', 'desktop.ini'))
 
         reg = defaultdict(list)
 
@@ -58,12 +61,6 @@ class dupFind():
         for de in ff:
             for fe in de.data:
                 reg[fe.name()].append(fe)
-
-        print('all file entries:', len(reg))
-
-        reg = { fn:fs for fn, fs in reg.items() if len(fs) > 1}
-
-        print('dup file entries:', len(reg))
 
         # folder -> { folders with common files }
         # path -> { paths, ... }
@@ -88,6 +85,7 @@ class dupFind():
         cnt_byte = 0
 
         for fn, ln in reg.items():
+            if len(ln) < 2: continue
             pp.proceed()
             cnt_name += len(ln)
             #   separate into file size
@@ -115,6 +113,12 @@ class dupFind():
                     for n, dir in enumerate(sorted(dirs)):
                         for dir2 in dirs[n + 1:]:
                             hDirs[dir].add(dir2)
+
+        print('writing', pklOut)
+        with open(pklOut, 'wb') as fh:
+            pdump((hDirs, hDirChecksums, hChecksum), fh)
+
+        return
 
         for dir1, others in hDirs.items():
             s1 = hDirChecksums[dir1]
@@ -157,99 +161,105 @@ class dupFind():
         print(f'hash duplicates:{cnt_hash:>6}')
         print(f'bytes hashed   :{cnt_byte:>6}')
 
-    def analyze(self, fp, *prefPaths):
-        """process text report"""
+    def interact(self, pklIn=None):
+        """process scan data"""
         try:
-            with open(fp, 'r') as fh:
-                cont = fh.read()
+            pklIn = self.pklName(pklIn)
+            chkFile(pklIn)
         except Exception as e:
             print(e)
+            return
 
-        rxPref = None
+        with open(pklIn, 'rb') as fh:
+            (hDirs, hDirChecksums, hChecksum) = fh
 
-        if prefPaths:
-            rxPref = re.compile(r'^(?:' + '|'.join(map(re.escape, prefPaths)) + r').*$')
-            print('pref:', rxPref.pattern)
+        print('loaded:', len(hDirs), len(hDirChecksums), len(hChecksum))
 
-        def dirHash(dirs:tuple):
-            h = self.newhash()
-            for d in dirs: h.update(d.encode('utf-8'))
-            return h.hexdigest()
+        # rxPref = None
 
-        rxFile      = re.compile(r'^> (.+)((?:\n- .+)+)', re.M)
-        rxPaths     = re.compile(r'^- (.+)', re.M)
-        hDirFiles   = defaultdict(set)
-        hDirCombis  = dict()
-        reducedDirs = set()
+        # if prefPaths:
+        #     rxPref = re.compile(r'^(?:' + '|'.join(map(re.escape, prefPaths)) + r').*$')
+        #     print('pref:', rxPref.pattern)
 
-        for fn, cpaths in rxFile.findall(cont):
-            dirs = tuple(sorted(dirname(p) for p in rxPaths.findall(cpaths)))
-            hash = dirHash(dirs)
-            if hash not in hDirCombis:
-                hDirCombis[hash] = dirs
-            for dir in dirs:
-                hDirFiles[dir].add(fn)
+        # def dirHash(dirs:tuple):
+        #     h = self.newhash()
+        #     for d in dirs: h.update(d.encode('utf-8'))
+        #     return h.hexdigest()
 
-        def reduceCombi(choice:tuple, nKeep):
-            sk = choice[nKeep][1]
-            for n, (dir, files) in enumerate(choice):
-                if n != nKeep:
-                    common = sk & files
-                    for fn in common:
-                        fp = join(dir, fn)
-                        print('remove', fp )
-                    hDirFiles[dir] -= common
-                    reducedDirs.add(dir)
+        # rxFile      = re.compile(r'^> (.+)((?:\n- .+)+)', re.M)
+        # rxPaths     = re.compile(r'^- (.+)', re.M)
+        # hDirFiles   = defaultdict(set)
+        # hDirCombis  = dict()
+        # reducedDirs = set()
 
-        def askChoice(choice:tuple):
-            nKeep = None
-            while True:
-                print(f'Nr: {"files":<5}: in folder:')
-                for n, (dir, files) in enumerate(choice):
-                    print(f'{n+1:>2}: {len(files):>5}: {dir}')
-                print('select number to keep (enter: skip, x: exit): ', end='')
-                c = input()
-                if c.isdigit():
-                    n = int(c)
-                    if n > 0 and n <= len(choice):
-                        nKeep = n - 1
-                        break
-                    else: continue
-                elif c and c in 'xX':
-                    print('exit')
-                    exit()
-                else:
-                    print()
-                    break
-            return nKeep
+        # for fn, cpaths in rxFile.findall(cont):
+        #     dirs = tuple(sorted(dirname(p) for p in rxPaths.findall(cpaths)))
+        #     hash = dirHash(dirs)
+        #     if hash not in hDirCombis:
+        #         hDirCombis[hash] = dirs
+        #     for dir in dirs:
+        #         hDirFiles[dir].add(fn)
 
-        def prefChoice(choice:tuple):
-            res = tuple(n for n, (dir, _) in enumerate(choice) if rxPref.match(dir))
-            return res[0] if len(res) == 1 else None
+        # def reduceCombi(choice:tuple, nKeep):
+        #     sk = choice[nKeep][1]
+        #     for n, (dir, files) in enumerate(choice):
+        #         if n != nKeep:
+        #             common = sk & files
+        #             for fn in common:
+        #                 fp = join(dir, fn)
+        #                 print('remove', fp )
+        #             hDirFiles[dir] -= common
+        #             reducedDirs.add(dir)
 
-            # for dir, files in choice:
-            #     print(len(hDirFiles[dir]), dir)
+        # def askChoice(choice:tuple):
+        #     nKeep = None
+        #     while True:
+        #         print(f'Nr: {"files":<5}: in folder:')
+        #         for n, (dir, files) in enumerate(choice):
+        #             print(f'{n+1:>2}: {len(files):>5}: {dir}')
+        #         print('select number to keep (enter: skip, x: exit): ', end='')
+        #         c = input()
+        #         if c.isdigit():
+        #             n = int(c)
+        #             if n > 0 and n <= len(choice):
+        #                 nKeep = n - 1
+        #                 break
+        #             else: continue
+        #         elif c and c in 'xX':
+        #             print('exit')
+        #             exit()
+        #         else:
+        #             print()
+        #             break
+        #     return nKeep
 
+        # def prefChoice(choice:tuple):
+        #     res = tuple(n for n, (dir, _) in enumerate(choice) if rxPref.match(dir))
+        #     return res[0] if len(res) == 1 else None
 
-        if rxPref:
-            procChoice = lambda choice: prefChoice(choice)
-        else:
-            procChoice = lambda choice: askChoice(choice)
-
-        for combi in hDirCombis.values():
-            choice = tuple((dir, files) for dir, files in [(dir, hDirFiles[dir]) for dir in combi] if files)
-            if len(choice) > 1:
-                n = procChoice(choice)
-                if n is not None: reduceCombi(choice, n)
-
-        for dir in sorted(reducedDirs):
-            files = hDirFiles[dir]
-            if len(files) > 0:
-                print(dir, *files)
+        #     # for dir, files in choice:
+        #     #     print(len(hDirFiles[dir]), dir)
 
 
-        print('dirs  :', len(hDirFiles))
-        print('combis:', len(hDirCombis))
+        # if rxPref:
+        #     procChoice = lambda choice: prefChoice(choice)
+        # else:
+        #     procChoice = lambda choice: askChoice(choice)
+
+        # for combi in hDirCombis.values():
+        #     choice = tuple((dir, files) for dir, files in [(dir, hDirFiles[dir]) for dir in combi] if files)
+        #     if len(choice) > 1:
+        #         n = procChoice(choice)
+        #         if n is not None: reduceCombi(choice, n)
+
+        # for dir in sorted(reducedDirs):
+        #     files = hDirFiles[dir]
+        #     if len(files) > 0:
+        #         print(dir, *files)
+
+
+        # print('dirs  :', len(hDirFiles))
+        # print('combis:', len(hDirCombis))
 
 if __name__ == '__main__':
     from docopts import docopts, dochelp
@@ -259,8 +269,8 @@ if __name__ == '__main__':
     df = dupFind()
 
     if opts['s']:
-        df.scan(opts['s'], xglobFile=opts['f'])
-    elif opts['p']:
-        df.analyze(opts['p'], *args)
+        df.scan(opts['s'], xglobFile=opts['f'], pklOut=opts['b'])
+    elif opts['i']:
+        df.interact(*args, pklIn=opts['b'])
     else:
         dochelp(__doc__)

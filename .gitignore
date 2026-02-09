@@ -3,6 +3,7 @@
 tmp.*
 tmp
 tmp_*.*
+tmp_*
 *.html
 !*_template.html
 stuff
