@@ -7,6 +7,7 @@ tmp_*
 *.html
 !*_template.html
 stuff
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

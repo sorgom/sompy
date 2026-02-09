@@ -81,7 +81,7 @@ class dupFind():
         print('analysis..')
         cnt_name = 0
         cnt_size = 0
-        cnt_hash = 0
+        cnt_csum = 0
         cnt_byte = 0
 
         for fn, ln in reg.items():
@@ -95,15 +95,17 @@ class dupFind():
             #   filter entries with less than 2
             for sz, ls in hs.items():
                 if len(ls) < 2: continue
+                cnt_size += len(ls)
                 #   separate into checksum identity
                 hc = defaultdict(list)
                 for es in ls:
                     cs = self.checksum(es)
+                    cnt_byte += sz
                     if cs is None: continue
-                    #   check for checksum entry
                     hc[cs].append(es)
                 for cs, lc in hc.items():
                     if len(lc) < 2: continue
+                    cnt_csum += len(lc)
                     hChecksum[cs] = lc[0].name()
                     dirs = list()
                     for ec in lc:
@@ -118,17 +120,15 @@ class dupFind():
         with open(pklOut, 'wb') as fh:
             pdump((hDirs, hDirChecksums, hChecksum), fh)
 
+
+        print(f'name duplicates:{cnt_name:>6}')
+        print(f'size duplicates:{cnt_size:>6}')
+        print(f'hash duplicates:{cnt_csum:>6}')
+        print(f'bytes hashed   :{cnt_byte:>6}')
+
         return
 
-        for dir1, others in hDirs.items():
-            s1 = hDirChecksums[dir1]
-            for dir2 in others:
-                s2 = hDirChecksums[dir2]
-                sc = s1 & s2
-                if not sc: continue
-                fs = tuple(hChecksum[cs] for cs in sc)
-                print(dir1, dir2)
-                print(*fs)
+
 
 
         return
@@ -153,12 +153,12 @@ class dupFind():
                         if None in hh: del hh[None]
                         for lh in hh.values():
                             if len(lh) > 1:
-                                cnt_hash += len(lh) - 1
+                                cnt_csum += len(lh) - 1
                                 print(f'> {fn}', *(eh.path() for eh in lh), sep="\n- ")
 
         print(f'name duplicates:{cnt_name:>6}')
         print(f'size duplicates:{cnt_size:>6}')
-        print(f'hash duplicates:{cnt_hash:>6}')
+        print(f'hash duplicates:{cnt_csum:>6}')
         print(f'bytes hashed   :{cnt_byte:>6}')
 
     def interact(self, pklIn=None):
@@ -171,9 +171,46 @@ class dupFind():
             return
 
         with open(pklIn, 'rb') as fh:
-            (hDirs, hDirChecksums, hChecksum) = fh
+            (hDirs, hDirChecksums, hChecksum) = pload(fh)
 
         print('loaded:', len(hDirs), len(hDirChecksums), len(hChecksum))
+
+        for dir1, others in hDirs.items():
+            s1 = hDirChecksums[dir1]
+            for dir2 in others:
+                s2 = hDirChecksums[dir2]
+                sc = s1 & s2
+                if not sc: continue
+                fs = tuple(hChecksum[cs] for cs in sc)
+                dirs = (dir1, dir2)
+                while True:
+                    print(len(fs), 'common files')
+                    print(*fs)
+                    for n, dir in enumerate(dirs):
+                        print(f'{n+1}) {dir} ')
+                    print('select number to KEEP (enter: skip, x: exit): ', end='')
+                    nClear = None
+                    c = input()
+                    if c.isdigit():
+                        n = int(c)
+                        if n > 0 and n <= 2:
+                            nClear = n % 2
+                            break
+                        else: continue
+                    elif c and c in 'xX':
+                        print('exit')
+                        return
+                    else:
+                        print()
+                        break
+                if nClear is not None:
+                    dc = dirs[nClear]
+                    hDirChecksums[dc] -= sc
+                    print('clear:', dirs[nClear])
+                    for fn in fs:
+                        fp = join(dc, fn)
+                        print('remove:', fp)
+
 
         # rxPref = None
 
@@ -200,10 +237,10 @@ class dupFind():
         #     for dir in dirs:
         #         hDirFiles[dir].add(fn)
 
-        # def reduceCombi(choice:tuple, nKeep):
-        #     sk = choice[nKeep][1]
+        # def reduceCombi(choice:tuple, nClear):
+        #     sk = choice[nClear][1]
         #     for n, (dir, files) in enumerate(choice):
-        #         if n != nKeep:
+        #         if n != nClear:
         #             common = sk & files
         #             for fn in common:
         #                 fp = join(dir, fn)
@@ -212,7 +249,7 @@ class dupFind():
         #             reducedDirs.add(dir)
 
         # def askChoice(choice:tuple):
-        #     nKeep = None
+        #     nClear = None
         #     while True:
         #         print(f'Nr: {"files":<5}: in folder:')
         #         for n, (dir, files) in enumerate(choice):
@@ -222,7 +259,7 @@ class dupFind():
         #         if c.isdigit():
         #             n = int(c)
         #             if n > 0 and n <= len(choice):
-        #                 nKeep = n - 1
+        #                 nClear = n - 1
         #                 break
         #             else: continue
         #         elif c and c in 'xX':
@@ -231,7 +268,7 @@ class dupFind():
         #         else:
         #             print()
         #             break
-        #     return nKeep
+        #     return nClear
 
         # def prefChoice(choice:tuple):
         #     res = tuple(n for n, (dir, _) in enumerate(choice) if rxPref.match(dir))
