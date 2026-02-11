@@ -14,7 +14,7 @@ options
 from collections import defaultdict
 from hashlib import file_digest, new as new_hash
 from os import remove, stat
-from os.path import dirname, join, abspath
+from os.path import dirname, basename, join, abspath
 from pickle import dump as pdump, load as pload
 from sys import stderr
 import re
@@ -100,7 +100,6 @@ class dupFind():
         # must be checked for duplicate checksum
         self.hChecksum = dict()
 
-
         pp = ProgressPercent(len(reg))
 
         self.info('analysis', '...')
@@ -131,7 +130,7 @@ class dupFind():
                 for cs, lc in hc.items():
                     if len(lc) < 2: continue
                     cnt_csum += len(lc)
-                    self.hChecksum[cs] = lc[0].name()
+                    self.hChecksum[cs] = fn
                     dirs = list()
                     for ec in lc:
                         dir = dirname(ec.path())
@@ -205,92 +204,6 @@ class dupFind():
 
         if chg and not preview:
             self.dumpPkl(pkl)
-
-        # rxPref = None
-
-        # if prefPaths:
-        #     rxPref = re.compile(r'^(?:' + '|'.join(map(re.escape, prefPaths)) + r').*$')
-        #     print('pref:', rxPref.pattern)
-
-        # def dirHash(dirs:tuple):
-        #     h = self.newhash()
-        #     for d in dirs: h.update(d.encode('utf-8'))
-        #     return h.hexdigest()
-
-        # rxFile      = re.compile(r'^> (.+)((?:\n- .+)+)', re.M)
-        # rxPaths     = re.compile(r'^- (.+)', re.M)
-        # hDirFiles   = defaultdict(set)
-        # hDirCombis  = dict()
-        # reducedDirs = set()
-
-        # for fn, cpaths in rxFile.findall(cont):
-        #     dirs = tuple(sorted(dirname(p) for p in rxPaths.findall(cpaths)))
-        #     hash = dirHash(dirs)
-        #     if hash not in hDirCombis:
-        #         hDirCombis[hash] = dirs
-        #     for dir in dirs:
-        #         hDirFiles[dir].add(fn)
-
-        # def reduceCombi(choice:tuple, nClear):
-        #     sk = choice[nClear][1]
-        #     for n, (dir, files) in enumerate(choice):
-        #         if n != nClear:
-        #             common = sk & files
-        #             for fn in common:
-        #                 fp = join(dir, fn)
-        #                 print('remove', fp )
-        #             hDirFiles[dir] -= common
-        #             reducedDirs.add(dir)
-
-        # def askChoice(choice:tuple):
-        #     nClear = None
-        #     while True:
-        #         print(f'Nr: {"files":<5}: in folder:')
-        #         for n, (dir, files) in enumerate(choice):
-        #             print(f'{n+1:>2}: {len(files):>5}: {dir}')
-        #         print('select number to keep (enter: skip, x: exit): ', end='')
-        #         c = input()
-        #         if c.isdigit():
-        #             n = int(c)
-        #             if n > 0 and n <= len(choice):
-        #                 nClear = n - 1
-        #                 break
-        #             else: continue
-        #         elif c and c in 'xX':
-        #             print('exit')
-        #             exit()
-        #         else:
-        #             print()
-        #             break
-        #     return nClear
-
-        # def prefChoice(choice:tuple):
-        #     res = tuple(n for n, (dir, _) in enumerate(choice) if rxPref.match(dir))
-        #     return res[0] if len(res) == 1 else None
-
-        #     # for dir, files in choice:
-        #     #     print(len(hDirFiles[dir]), dir)
-
-
-        # if rxPref:
-        #     procChoice = lambda choice: prefChoice(choice)
-        # else:
-        #     procChoice = lambda choice: askChoice(choice)
-
-        # for combi in hDirCombis.values():
-        #     choice = tuple((dir, files) for dir, files in [(dir, hDirFiles[dir]) for dir in combi] if files)
-        #     if len(choice) > 1:
-        #         n = procChoice(choice)
-        #         if n is not None: reduceCombi(choice, n)
-
-        # for dir in sorted(reducedDirs):
-        #     files = hDirFiles[dir]
-        #     if len(files) > 0:
-        #         print(dir, *files)
-
-
-        # print('dirs  :', len(hDirFiles))
-        # print('combis:', len(hDirCombis))
 
 if __name__ == '__main__':
     from docopts import docopts, dochelp
