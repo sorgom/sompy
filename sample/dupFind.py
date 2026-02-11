@@ -8,18 +8,22 @@ options
     -i  interactively process scan results
     -f  <file> use xglobs from file for scan
     -b  <file> binary scan results storage file
+    -p  preview only
     -h  this help
 """
 from collections import defaultdict
 from hashlib import file_digest, new as new_hash
+from os import remove, stat
 from os.path import dirname, join, abspath
 from pickle import dump as pdump, load as pload
+from sys import stderr
 import re
 
 import sompy
 from ff import FF_XGlob
 from progress import ProgressPercent
 from dirTools import chkFile, chkDir
+from formats import humanbytes
 
 class dupFind():
     "the duplicate finder class"
@@ -27,7 +31,6 @@ class dupFind():
     def __init__(self, hashType:str='sha1'):
         self.fhash = lambda fh: file_digest(fh, hashType).hexdigest()
         self.newhash = lambda : new_hash(hashType)
-        pass
 
     def checksum(self, fe):
         try:
@@ -43,20 +46,42 @@ class dupFind():
         fname = re.sub(r'^(.*)\.pkl', r'\1', fname, flags=re.I)
         return abspath(f'{fname}.pkl')
 
-    def scan(self, root:str, xglobFile=None, pklOut=None):
+    @staticmethod
+    def info(what, cont=''):
+        print(f'{what:<20}: {cont:>10}', file=stderr)
+
+    @staticmethod
+    def prevRm(dir, files):
+        print(dir, *files, sep="\n- ")
+
+    @staticmethod
+    def execRm(dir, files):
+        for fn in files:
+            remove(join(dir, fn))
+
+    def loadPkl(self, pkl):
+        with open(pkl, 'rb') as fh:
+            (self.hDirs, self.hDirChecksums, self.hChecksum) = pload(fh)
+
+    def dumpPkl(self, pkl):
+        with open(pkl, 'wb') as fh:
+            pdump((self.hDirs, self.hDirChecksums, self.hChecksum), fh)
+
+
+    def scan(self, root:str, xglobFile=None, pkl=None):
         try:
             ff = FF_XGlob(root, xglobFile=xglobFile)
-            pklOut = self.pklName(pklOut)
-            chkDir(dirname(pklOut))
+            pkl = self.pklName(pkl)
+            chkDir(dirname(pkl))
         except Exception as e:
             print(e)
             return
 
         reg = defaultdict(list)
 
-        print('ROOT:', ff.root())
+        self.info('ROOT:', ff.root())
 
-        print('scan..')
+        self.info('scan', '...')
 
         for de in ff:
             for fe in de.data:
@@ -64,21 +89,21 @@ class dupFind():
 
         # folder -> { folders with common files }
         # path -> { paths, ... }
-        hDirs = defaultdict(set)
+        self.hDirs = defaultdict(set)
 
         # folder -> { file checksums }
         # path -> { checksum, .... }
-        hDirChecksums = defaultdict(set)
+        self.hDirChecksums = defaultdict(set)
 
         # check sum  -> file name
         # checksum -> basename fo file
         # must be checked for duplicate checksum
-        hChecksum = dict()
+        self.hChecksum = dict()
 
 
         pp = ProgressPercent(len(reg))
 
-        print('analysis..')
+        self.info('analysis', '...')
         cnt_name = 0
         cnt_size = 0
         cnt_csum = 0
@@ -106,84 +131,53 @@ class dupFind():
                 for cs, lc in hc.items():
                     if len(lc) < 2: continue
                     cnt_csum += len(lc)
-                    hChecksum[cs] = lc[0].name()
+                    self.hChecksum[cs] = lc[0].name()
                     dirs = list()
                     for ec in lc:
                         dir = dirname(ec.path())
-                        hDirChecksums[dir].add(cs)
+                        self.hDirChecksums[dir].add(cs)
                         dirs.append(dir)
                     for n, dir in enumerate(sorted(dirs)):
                         for dir2 in dirs[n + 1:]:
-                            hDirs[dir].add(dir2)
-
-        print('writing', pklOut)
-        with open(pklOut, 'wb') as fh:
-            pdump((hDirs, hDirChecksums, hChecksum), fh)
+                            if dir2 != dir:
+                                self.hDirs[dir].add(dir2)
 
 
-        print(f'name duplicates:{cnt_name:>6}')
-        print(f'size duplicates:{cnt_size:>6}')
-        print(f'hash duplicates:{cnt_csum:>6}')
-        print(f'bytes hashed   :{cnt_byte:>6}')
+        self.dumpPkl(pkl)
 
-        return
+        self.info('name duplicates', cnt_name)
+        self.info('size duplicates', cnt_size)
+        self.info('hash duplicates', cnt_csum)
+        self.info('bytes hashed', humanbytes(cnt_byte))
 
-
-
-
-        return
-
-        for fn, fs in reg.items():
-            pp.proceed()
-            # more two or more files with same name
-            if len(fs) > 1:
-                cnt_name += len(fs) - 1
-                # check for same file size
-                hs = defaultdict(list)
-                for ef in fs:
-                    hs[ef.stat().st_size].append(ef)
-                for sz, ls in hs.items():
-                    if len(ls) > 1:
-                        cnt_size += len(ls) - 1
-                        cnt_byte += sz * len(ls)
-                        # check for same file checksum
-                        hh = defaultdict(list)
-                        for es in ls:
-                            hh[self.hash(es)].append(es)
-                        if None in hh: del hh[None]
-                        for lh in hh.values():
-                            if len(lh) > 1:
-                                cnt_csum += len(lh) - 1
-                                print(f'> {fn}', *(eh.path() for eh in lh), sep="\n- ")
-
-        print(f'name duplicates:{cnt_name:>6}')
-        print(f'size duplicates:{cnt_size:>6}')
-        print(f'hash duplicates:{cnt_csum:>6}')
-        print(f'bytes hashed   :{cnt_byte:>6}')
-
-    def interact(self, pklIn=None):
+    def interact(self, pkl=None, preview=None):
         """process scan data"""
         try:
-            pklIn = self.pklName(pklIn)
-            chkFile(pklIn)
+            pkl = self.pklName(pkl)
+            chkFile(pkl)
         except Exception as e:
             print(e)
             return
 
-        with open(pklIn, 'rb') as fh:
-            (hDirs, hDirChecksums, hChecksum) = pload(fh)
+        if preview:
+            rm = lambda *p : self.prevRm(*p)
+        else:
+            rm = lambda *p : self.execRm(*p)
 
-        print('loaded:', len(hDirs), len(hDirChecksums), len(hChecksum))
+        self.loadPkl(pkl)
 
-        for dir1, others in hDirs.items():
-            s1 = hDirChecksums[dir1]
+        chg = False
+
+        for dir1, others in sorted(self.hDirs.items()):
+            s1 = self.hDirChecksums[dir1]
             for dir2 in others:
-                s2 = hDirChecksums[dir2]
+                s2 = self.hDirChecksums[dir2]
                 sc = s1 & s2
                 if not sc: continue
-                fs = tuple(hChecksum[cs] for cs in sc)
+                fs = tuple(self.hChecksum[cs] for cs in sc)
                 dirs = (dir1, dir2)
                 while True:
+                    print()
                     print(len(fs), 'common files')
                     print(*fs)
                     for n, dir in enumerate(dirs):
@@ -197,7 +191,7 @@ class dupFind():
                             nClear = n % 2
                             break
                         else: continue
-                    elif c and c in 'xX':
+                    elif c and c in 'xXqQ':
                         print('exit')
                         return
                     else:
@@ -205,12 +199,12 @@ class dupFind():
                         break
                 if nClear is not None:
                     dc = dirs[nClear]
-                    hDirChecksums[dc] -= sc
-                    print('clear:', dirs[nClear])
-                    for fn in fs:
-                        fp = join(dc, fn)
-                        print('remove:', fp)
+                    self.hDirChecksums[dc] -= sc
+                    rm(dc, fs)
+                    chg = True
 
+        if chg and not preview:
+            self.dumpPkl(pkl)
 
         # rxPref = None
 
@@ -306,8 +300,8 @@ if __name__ == '__main__':
     df = dupFind()
 
     if opts['s']:
-        df.scan(opts['s'], xglobFile=opts['f'], pklOut=opts['b'])
+        df.scan(opts['s'], xglobFile=opts['f'], pkl=opts['b'])
     elif opts['i']:
-        df.interact(*args, pklIn=opts['b'])
+        df.interact(*args, pkl=opts['b'], preview=opts['p'])
     else:
         dochelp(__doc__)

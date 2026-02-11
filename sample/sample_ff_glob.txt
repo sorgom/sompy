@@ -10,6 +10,8 @@ MyDownloads
 drivers
 cadul
 _Material-Sammlungen
+DCIM2?
+Re-Volt
 
 #   exclude files patterns
     >   XF
