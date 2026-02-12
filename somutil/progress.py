@@ -74,11 +74,6 @@ class ProgressPercent(Progress):
     def __init__(self, total):
         super().__init__(total)
 
-        def mkInfo():
-            return lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
-
-        self.info = mkInfo()
-
     def _mkOut(self, total):
         if total > 0:
             fac = 100 / total
