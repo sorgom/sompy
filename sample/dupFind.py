@@ -21,7 +21,7 @@ import re
 
 import sompy
 from ff import FF_XGlob
-from progress import ProgressPercent
+from progress import ProgressBar, ProgressPercent
 from dirTools import chkFile, chkDir
 from formats import humanbytes
 
@@ -96,11 +96,11 @@ class dupFind():
         self.hDirChecksums = defaultdict(set)
 
         # check sum  -> file name
-        # checksum -> basename fo file
+        # checksum -> basename of file
         # must be checked for duplicate checksum
         self.hChecksum = dict()
 
-        pp = ProgressPercent(len(reg))
+        pp = ProgressBar(40, len(reg))
 
         self.info('analysis', '...')
         cnt_name = 0
@@ -109,8 +109,8 @@ class dupFind():
         cnt_byte = 0
 
         for fn, ln in reg.items():
-            if len(ln) < 2: continue
             pp.proceed()
+            if len(ln) < 2: continue
             cnt_name += len(ln)
             #   separate into file size
             hs = defaultdict(list)
@@ -144,6 +144,7 @@ class dupFind():
 
         self.dumpPkl(pkl)
 
+        print()
         self.info('name duplicates', cnt_name)
         self.info('size duplicates', cnt_size)
         self.info('hash duplicates', cnt_csum)
