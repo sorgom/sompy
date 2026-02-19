@@ -1,14 +1,16 @@
 """
 find duplicate files
 
-usage1: this script -s folder [options]
-usage2: this script -i
+usage1: this script -s [options] folders ...
+usage2: this script -i [options]
 options
-    -s  <folder> scan folder
+    -s  scan
+        -g  <file> use xglobs from file for scan
+
     -i  interactively process scan results
-    -f  <file> use xglobs from file for scan
+        -p  preview only
+
     -b  <file> binary scan results storage file
-    -p  preview only
     -h  this help
 """
 from collections import defaultdict
@@ -60,32 +62,24 @@ class dupFind():
             remove(join(dir, fn))
 
     def loadPkl(self, pkl):
+        print('<-', abspath(pkl))
         with open(pkl, 'rb') as fh:
             (self.hDirs, self.hDirChecksums, self.hChecksum) = pload(fh)
 
     def dumpPkl(self, pkl):
+        print('->', abspath(pkl))
         with open(pkl, 'wb') as fh:
             pdump((self.hDirs, self.hDirChecksums, self.hChecksum), fh)
 
 
-    def scan(self, root:str, xglobFile=None, pkl=None):
+    def scan(self, *folders, xglobFile=None, pkl=None):
         try:
-            ff = FF_XGlob(root, xglobFile=xglobFile)
+            for folder in folders: chkDir(folder)
             pkl = self.pklName(pkl)
             chkDir(dirname(pkl))
         except Exception as e:
             print(e)
             return
-
-        reg = defaultdict(list)
-
-        self.info('ROOT:', ff.root())
-
-        self.info('scan', '...')
-
-        for de in ff:
-            for fe in de.data:
-                reg[fe.name()].append(fe)
 
         # folder -> { folders with common files }
         # path -> { paths, ... }
@@ -100,13 +94,23 @@ class dupFind():
         # must be checked for duplicate checksum
         self.hChecksum = dict()
 
-        pp = ProgressBar(40, len(reg))
-
-        self.info('analysis', '...')
         cnt_name = 0
         cnt_size = 0
         cnt_csum = 0
         cnt_byte = 0
+
+        reg = defaultdict(list)
+
+        for folder in folders:
+            ff = FF_XGlob(folder, xglobFile=xglobFile)
+            self.info('scan', ff.root())
+            for de in ff:
+                for fe in de.data:
+                    reg[fe.name()].append(fe)
+
+        pp = ProgressBar(40, len(reg))
+
+        self.info('analysis', '...')
 
         for fn, ln in reg.items():
             pp.proceed()
@@ -136,15 +140,17 @@ class dupFind():
                         dir = dirname(ec.path())
                         self.hDirChecksums[dir].add(cs)
                         dirs.append(dir)
-                    for n, dir in enumerate(sorted(dirs)):
-                        for dir2 in dirs[n + 1:]:
-                            if dir2 != dir:
-                                self.hDirs[dir].add(dir2)
+                    for dirA in dirs:
+                        for dirB in dirs:
+                            if dirB != dirA and dirA not in self.hDirs[dirB]:
+                                self.hDirs[dirA].add(dirB)
 
 
-        self.dumpPkl(pkl)
+
 
         print()
+        self.dumpPkl(pkl)
+
         self.info('name duplicates', cnt_name)
         self.info('size duplicates', cnt_size)
         self.info('hash duplicates', cnt_csum)
@@ -171,6 +177,7 @@ class dupFind():
         for dir1, others in sorted(self.hDirs.items()):
             s1 = self.hDirChecksums[dir1]
             for dir2 in others:
+                # print(dir1, '<->', dir2)
                 s2 = self.hDirChecksums[dir2]
                 sc = s1 & s2
                 if not sc: continue
@@ -214,7 +221,7 @@ if __name__ == '__main__':
     df = dupFind()
 
     if opts['s']:
-        df.scan(opts['s'], xglobFile=opts['f'], pkl=opts['b'])
+        df.scan(*args, xglobFile=opts['g'], pkl=opts['b'])
     elif opts['i']:
         df.interact(*args, pkl=opts['b'], preview=opts['p'])
     else:
