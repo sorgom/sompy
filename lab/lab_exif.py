@@ -1,3 +1,4 @@
+from collections import defaultdict
 from EnumExif import Exif
 from PIL import Image
 from PIL.ExifTags import TAGS
@@ -18,7 +19,8 @@ rxModel = re.compile(r'^(\w+).*')
 rDate = r'(\d{4}).(\d{2}).(\d{2}).(\d{2}).(\d{2}).(\d{2})'
 rxDateTime = re.compile(r'^' + rDate)
 rxDateTimeOriginal = re.compile(r'^.*<exif:DateTimeOriginal>' + rDate + r'.*', re.S | re.I)
-rSub = r'\1-\2-\3_\4\5\6'
+#rSub = r'\1-\2-\3_\4\5\6'
+rSub = r'\1-\2-\3_\4\5'
 
 # tag listing for md file
 # for tag, id in sorted(TAGS.items(), key=lambda i: i[1].upper()):
@@ -26,19 +28,23 @@ rSub = r'\1-\2-\3_\4\5\6'
 # exit>()
 
 from glob import glob
-from os.path import join, dirname, splitext
+from os.path import join, dirname, splitext, abspath
 
-imgDir = join(dirname(__file__), '..', 'tmp_img')
+imgDir = abspath(join(dirname(__file__), '..', 'tmp_img'))
 
 imgExt = tuple(('.jpg', '.jpeg', '.png', '.tif', '.tiff',  '.heic', '.avif'))
 
+# TODO: read from setup file
+mNames = { 'compactline':'rollei' }
+
+targetFiles = defaultdict(list)
 
 for file in glob(join(imgDir, '**', '*.*'), recursive=True):
     if file.lower().endswith(imgExt):
         try:
             image = Image.open(file)
             xdata = image.getexif()
-            print('file', file)
+            # print('file', file)
             #   photoshop TIF
             xm = xdata.get(Exif.XMLPacket.value)
             sw = xdata.get(Exif.Software.value)
@@ -48,10 +54,31 @@ for file in glob(join(imgDir, '**', '*.*'), recursive=True):
                 date = xdata.get(Exif.DateTime.value)
                 if date is None: continue
                 ds = rxDateTime.sub(rSub, date)
-            model = rxModel.sub(r'\1', xdata.get(Exif.Model.value, 'nn'))
-            newName = f'{ds}_{model.lower()}{splitext(file)[1]}'
+            model = rxModel.sub(r'\1', xdata.get(Exif.Model.value, 'nn')).lower()
+            model = mNames.get(model, model)
+            newName = f'{ds}_{model}{splitext(file)[1]}'
             target = join(imgDir, newName)
-            print('target', target)
+            targetFiles[target].append(file)
+            # print('target', target)
+        except Exception as e:
+            print(e)
+            pass
+
+trans = list()
+
+for target, files in targetFiles.items():
+    lf = len(files)
+    if lf > 1:
+        d = len(str(lf))
+        p, x = splitext(target)
+        for n, f in enumerate(sorted(files)):
+            nt = f'{p}_{n + 1:0{d}d}{x}'
+            trans.append((f, nt))
+    else:
+        trans.append((files[0], target))
+
+for f, t in trans:
+    print(f, '->', t)
 
             # for tag_id in xdata:
             #     tag = TAGS.get(tag_id, tag_id)
@@ -67,9 +94,6 @@ for file in glob(join(imgDir, '**', '*.*'), recursive=True):
             # target = join(imgDir, newName)
             # print('target', target)
 
-        except Exception as e:
-            print(e)
-            pass
 
     # all tags
 
