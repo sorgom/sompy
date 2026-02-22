@@ -219,23 +219,8 @@ class FF_XGlob(FF_Re):
 
     @staticmethod
     def f2xglob(fp:str):
-        chkFile(fp)
-        with open(fp, 'r') as fh:
-            #   multiple emty lines
-            txt = re.sub(r'\n{2,}', '\n',
-                    #   comments
-                    re.sub(r'^#.*', '',
-                        #   leading and tailing line spaces
-                        re.sub(r'(?:^ +| +$)', '',
-                                #   content without tabs
-                                fh.read().strip().replace("\t", ' '), flags=re.M),
-                        flags=re.M))
-            #   split into sections
-            items = re.split(r'^> *(.+)', txt, flags=re.M)[1:]
-            items = tuple((key, cont.strip()) for (key, cont) in batched(items, 2))
-            map = {key.upper():tuple(cont.split("\n")) for (key, cont) in items if cont}
-            return tuple(map.get(c) for c in ('TF', 'XF', 'TD', 'XD'))
-
+        map = XGlob.f2h(fp)
+        return tuple(map.get(c) for c in ('TF', 'XF', 'TD', 'XD'))
 
 if __name__ == '__main__':
     from sys import argv

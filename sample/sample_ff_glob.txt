@@ -1,17 +1,5 @@
 #   exclude directories patterns
-> XD
-git
-git_old
-.git
-Adobe
-installers
 $RECYCLE.BIN
-MyDownloads
-drivers
-cadul
-_Material-Sammlungen
-# DCIM2?
-Re-Volt
 
 #   exclude files patterns
     >   XF

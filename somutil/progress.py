@@ -76,7 +76,10 @@ class ProgressPercent(Progress):
     def _mkOut(self, total):
         if total > 0:
             fac = 100 / total
-            return lambda cnt: print(f'{cnt * fac:8.02f}%', end="\r", file=stderr)
+            f = max(1, int(total / 1000 + 0.5))
+            p = len(str(f))
+            w = p + 6
+            return lambda cnt: print(f'{cnt * fac:{w}.0{p}f}%', end="\r", file=stderr)
         else:
             return lambda cnt: print(f'{cnt:>6}', end="\r", file=stderr)
 

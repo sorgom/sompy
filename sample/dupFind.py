@@ -15,15 +15,15 @@ options
 """
 from collections import defaultdict
 from hashlib import file_digest, new as new_hash
-from os import remove, stat
-from os.path import dirname, basename, join, abspath
+from os import remove
+from os.path import dirname, join, abspath
 from pickle import dump as pdump, load as pload
 from sys import stderr
 import re
 
 import sompy
 from ff import FF_XGlob
-from progress import ProgressBar, ProgressPercent
+from progress import ProgressPercent
 from dirTools import chkFile, chkDir
 from formats import humanbytes
 
@@ -64,12 +64,12 @@ class dupFind():
     def loadPkl(self, pkl):
         print('<-', abspath(pkl))
         with open(pkl, 'rb') as fh:
-            (self.hDirs, self.hDirChecksums, self.hChecksum) = pload(fh)
+            (self.hDirs, self.hDirChecksums, self.hChecksumName, self.hChecksumSize) = pload(fh)
 
     def dumpPkl(self, pkl):
         print('->', abspath(pkl))
         with open(pkl, 'wb') as fh:
-            pdump((self.hDirs, self.hDirChecksums, self.hChecksum), fh)
+            pdump((self.hDirs, self.hDirChecksums, self.hChecksumName, self.hChecksumSize), fh)
 
 
     def scan(self, *folders, xglobFile=None, pkl=None):
@@ -91,8 +91,10 @@ class dupFind():
 
         # check sum  -> file name
         # checksum -> basename of file
-        # must be checked for duplicate checksum
-        self.hChecksum = dict()
+        self.hChecksumName = dict()
+
+        # checksum -> file size
+        self.hChecksumSize = dict()
 
         cnt_name = 0
         cnt_size = 0
@@ -108,33 +110,34 @@ class dupFind():
                 for fe in de.data:
                     reg[fe.name()].append(fe)
 
-        pp = ProgressBar(40, len(reg))
+        # pp = ProgressBar(40, len(reg))
+        pp = ProgressPercent(len(reg))
 
         self.info('analysis', '...')
 
         for fn, ln in reg.items():
             pp.proceed()
             if len(ln) < 2: continue
-            cnt_name += len(ln)
+            cnt_name += len(ln) - 1
             #   separate into file size
             hs = defaultdict(list)
             for en in ln:
                 hs[en.stat().st_size].append(en)
-            #   filter entries with less than 2
             for sz, ls in hs.items():
                 if len(ls) < 2: continue
-                cnt_size += len(ls)
+                cnt_size += len(ls) - 1
                 #   separate into checksum identity
                 hc = defaultdict(list)
                 for es in ls:
                     cs = self.checksum(es)
-                    cnt_byte += sz
                     if cs is None: continue
                     hc[cs].append(es)
                 for cs, lc in hc.items():
                     if len(lc) < 2: continue
-                    cnt_csum += len(lc)
-                    self.hChecksum[cs] = fn
+                    cnt_csum += len(lc) - 1
+                    cnt_byte += sz * (len(lc) - 1)
+                    self.hChecksumName[cs] = fn
+                    self.hChecksumSize[cs] = sz
                     dirs = list()
                     for ec in lc:
                         dir = dirname(ec.path())
@@ -154,7 +157,7 @@ class dupFind():
         self.info('name duplicates', cnt_name)
         self.info('size duplicates', cnt_size)
         self.info('hash duplicates', cnt_csum)
-        self.info('bytes hashed', humanbytes(cnt_byte))
+        self.info('duplicate size', humanbytes(cnt_byte))
 
     def interact(self, pkl=None, preview=None):
         """process scan data"""
@@ -181,15 +184,16 @@ class dupFind():
                 s2 = self.hDirChecksums[dir2]
                 sc = s1 & s2
                 if not sc: continue
-                fs = tuple(self.hChecksum[cs] for cs in sc)
+                fs = tuple(self.hChecksumName[cs] for cs in sc)
+                ts = sum(self.hChecksumSize[cs]  for cs in sc)
                 dirs = (dir1, dir2)
                 while True:
                     print()
-                    print(len(fs), 'common files')
+                    print(len(fs), 'common files', humanbytes(ts))
                     print(*fs)
                     for n, dir in enumerate(dirs):
                         print(f'{n+1}) {dir} ')
-                    print('select number to KEEP (enter: skip, x: exit): ', end='')
+                    print('select number to KEEP (enter: skip, q: quit): ', end='')
                     nClear = None
                     c = input()
                     if c.isdigit():
