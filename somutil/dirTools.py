@@ -22,6 +22,7 @@ def chkDir(dir):
 def chkFile(file):
     if not isfile(file):
         raise(DirToolsNoFile(file))
+    return file
 
 def getCaseSense(dir):
     with TemporaryDirectory(dir=dir) as td:

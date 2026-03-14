@@ -1,6 +1,5 @@
 """
 simple progress indication
-TODO: Progress base class
 """
 
 from sys import stderr
@@ -22,6 +21,9 @@ class Progress():
 
     def reset(self):
         self.__cnt = 0
+
+    def show(self):
+        self.proceed(0)
 
     def __gt__(self, val:int):
         return self.__cnt > val
@@ -67,24 +69,37 @@ class ProgressNum(Progress):
     def _mkOut(self, cap, w1, w2):
         return lambda cnt: print(f'{cap:<{w1}}:{cnt:>{w2}d}', end="\r", file=stderr)
 
-    def show(self):
-        self.proceed(0)
-
 class ProgressPercent(Progress):
     def __init__(self, total):
         super().__init__(total)
 
-        def mkInfo():
-            return lambda top, cont: print(f'{top:<{w1}}:{str(cont):>{w2}}')
-
-        self.info = mkInfo()
-
     def _mkOut(self, total):
         if total > 0:
             fac = 100 / total
-            return lambda cnt: print(f'{cnt * fac:8.02f}%', end="\r", file=stderr)
+            f = max(1, int(total / 1000 + 0.5))
+            p = len(str(f))
+            w = p + 6
+            return lambda cnt: print(f'{cnt * fac:{w}.0{p}f}%', end="\r", file=stderr)
         else:
             return lambda cnt: print(f'{cnt:>6}', end="\r", file=stderr)
+
+class ProgressBar(Progress):
+    def __init__(self, width:int, total):
+        self.nd = -1
+        super().__init__(max(8, width), total)
+
+    def _mkOut(self, width, total):
+        if total > 0:
+            fac = width / total
+            return lambda cnt: self.bar(width, fac, cnt)
+        else:
+            return lambda cnt: print(f'{cnt:>6}', end="\r", file=stderr)
+
+    def bar(self, width, fac, cnt):
+        nd = max(0, min(width, int(fac * cnt)))
+        if nd != self.nd:
+            print(f'   |{'=' * nd}{' ' * (width - nd)}|', end="\r", file=stderr)
+            self.nd = nd
 
     def show(self):
         self.proceed(0)
@@ -105,4 +120,5 @@ if __name__ == '__main__':
     sleep(1)
     test(pg)
     pg.info('done', pg.count())
-    test(ProgressPercent(15))
+    test(ProgressPercent(12))
+    test(ProgressBar(20, 12))

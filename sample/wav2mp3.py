@@ -25,7 +25,8 @@ if not: create folder, all files new
 """
 from collections import Counter
 from enum import Enum, auto
-from os import remove, makedirs, system
+from os import remove, makedirs, utime
+from subprocess import run, DEVNULL
 from os.path import join, isdir, isfile
 from shutil import which, rmtree
 import re
@@ -101,10 +102,15 @@ class Wav2Mp3(MtBase):
     def outLimit(self):
         return self.limit and self.cnt >= self.limit
 
-    def w2m(self, wav:str, mp3:str, s:ST):
+    def w2m(self, feWav, mp3:str, s:ST):
         if isdir(mp3): rmtree(mp3)
-        res = system(f'{self.cmd} "{wav}" "{mp3}"')
-        self.count(s if res == 0 else self.ST.errors)
+        res = run(f'{self.cmd} "{feWav.path()}" "{mp3}"', stderr=DEVNULL, stdout=DEVNULL)
+        if res.returncode == 0:
+            self.count(s)
+            t = feWav.mtime()
+            utime(mp3, (t, t))
+        else:
+            self.count(self.ST.errors)
 
     def process(self, *work):
         if self.outLimit(): return
@@ -144,20 +150,22 @@ class Wav2Mp3(MtBase):
                     feMp3 = mMp3.get(feWav)
                     if feMp3:
                         if self.force or feWav.mtime() > feMp3.mtime():
-                            self.process(feWav.path(), feMp3.path(), self.ST.replaced)
+                            self.process(feWav, feMp3.path(), self.ST.replaced)
                     else:
                         pathMp3 = join(dirMp3, self.mp3Name(feWav))
-                        self.process(feWav.path(), pathMp3, self.ST.new)
+                        self.process(feWav, pathMp3, self.ST.new)
             else:
                 self.mDir(dirMp3)
                 for feWav in deWav.data:
                     pathMp3 = join(dirMp3, self.mp3Name(feWav))
-                    self.process(feWav.path(), pathMp3, self.ST.new)
+                    self.process(feWav, pathMp3, self.ST.new)
+
+            self.finish()
 
             if self.outLimit():
                 break
 
-            self.finish()
+
         sw.stop()
         self.info('transfers', self.cnt.count())
         for n, c in [(n.value, n.name) for n in self.ST]:

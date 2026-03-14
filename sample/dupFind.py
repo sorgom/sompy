@@ -1,22 +1,31 @@
 """
 find duplicate files
 
-usage1: this script -s folder
-usage2: this script -p file [preferred folders ...]
+usage1: this script -s [options] folders ...
+usage2: this script -i [options]
 options
-    -s  <folder> scan folder
-    -p  <file> process scan results text file
-    -f  <file> use xglobs from file for scan
+    -s  scan
+        -g  <file> use xglobs from file for scan
+
+    -i  interactively process scan results
+        -p  preview only
+
+    -b  <file> binary scan results storage file
     -h  this help
 """
 from collections import defaultdict
 from hashlib import file_digest, new as new_hash
-from os.path import dirname, join
+from os import remove
+from os.path import dirname, join, abspath
+from pickle import dump as pdump, load as pload
+from sys import stderr
 import re
 
 import sompy
-from ff import FF_Base, FF_Re, FF_XGlob
+from ff import FF_XGlob
 from progress import ProgressPercent
+from dirTools import chkFile, chkDir
+from formats import humanbytes
 
 class dupFind():
     "the duplicate finder class"
@@ -24,7 +33,6 @@ class dupFind():
     def __init__(self, hashType:str='sha1'):
         self.fhash = lambda fh: file_digest(fh, hashType).hexdigest()
         self.newhash = lambda : new_hash(hashType)
-        pass
 
     def checksum(self, fe):
         try:
@@ -33,223 +41,181 @@ class dupFind():
         except:
             return None
 
-    def scan(self, root:str, xglobFile=None):
+    @staticmethod
+    def pklName(fname=None):
+        if fname is None:
+            return f'{__file__}.pkl'
+        fname = re.sub(r'^(.*)\.pkl', r'\1', fname, flags=re.I)
+        return abspath(f'{fname}.pkl')
+
+    @staticmethod
+    def info(what, cont=''):
+        print(f'{what:<20}: {cont:>10}', file=stderr)
+
+    @staticmethod
+    def prevRm(dir, files):
+        print(dir, *files, sep="\n- ")
+
+    @staticmethod
+    def execRm(dir, files):
+        for fn in files:
+            remove(join(dir, fn))
+
+    def loadPkl(self, pkl):
+        print('<-', abspath(pkl))
+        with open(pkl, 'rb') as fh:
+            (self.hDirs, self.hDirChecksums, self.hChecksumName, self.hChecksumSize) = pload(fh)
+
+    def dumpPkl(self, pkl):
+        print('->', abspath(pkl))
+        with open(pkl, 'wb') as fh:
+            pdump((self.hDirs, self.hDirChecksums, self.hChecksumName, self.hChecksumSize), fh)
+
+
+    def scan(self, *folders, xglobFile=None, pkl=None):
         try:
-            print('scan with:', xglobFile)
-            ff = FF_XGlob(root, xglobFile=xglobFile)
+            for folder in folders: chkDir(folder)
+            pkl = self.pklName(pkl)
+            chkDir(dirname(pkl))
         except Exception as e:
             print(e)
             return
 
-        #   mapping of file objects as hashes
-        #   hash -> object
-        #
-
-
-        # ff.addCheckXD(lambda de : de.name() in ('git', 'git_old', '.git', 'Adobe', 'installers', '$RECYCLE.BIN', 'MyDownloads', 'cadul', '_Material-Sammlungen'))
-        # ff.addCheckXF(lambda fe : fe.name() in ('id_rsa', 'id_rsa.pub', 'known_hosts', 'index.html', 'index.htm', 'index.php', 'desktop.ini'))
-
-        reg = defaultdict(list)
-
-        print('ROOT:', ff.root())
-
-        print('scan..')
-
-        for de in ff:
-            for fe in de.data:
-                reg[fe.name()].append(fe)
-
-        print('all file entries:', len(reg))
-
-        reg = { fn:fs for fn, fs in reg.items() if len(fs) > 1}
-
-        print('dup file entries:', len(reg))
-
         # folder -> { folders with common files }
         # path -> { paths, ... }
-        hDirs = defaultdict(set)
+        self.hDirs = defaultdict(set)
 
         # folder -> { file checksums }
         # path -> { checksum, .... }
-        hDirChecksums = defaultdict(set)
+        self.hDirChecksums = defaultdict(set)
 
         # check sum  -> file name
-        # checksum -> basename fo file
-        # must be checked for duplicate checksum
-        hChecksum = dict()
+        # checksum -> basename of file
+        self.hChecksumName = dict()
 
+        # checksum -> file size
+        self.hChecksumSize = dict()
 
-        pp = ProgressPercent(len(reg))
-
-        print('analysis..')
         cnt_name = 0
         cnt_size = 0
-        cnt_hash = 0
+        cnt_csum = 0
         cnt_byte = 0
+
+        reg = defaultdict(list)
+
+        for folder in folders:
+            ff = FF_XGlob(folder, xglobFile=xglobFile)
+            self.info('scan', ff.root())
+            for de in ff:
+                for fe in de.data:
+                    reg[fe.name()].append(fe)
+
+        # pp = ProgressBar(40, len(reg))
+        pp = ProgressPercent(len(reg))
+
+        self.info('analysis', '...')
 
         for fn, ln in reg.items():
             pp.proceed()
-            cnt_name += len(ln)
+            if len(ln) < 2: continue
+            cnt_name += len(ln) - 1
             #   separate into file size
             hs = defaultdict(list)
             for en in ln:
                 hs[en.stat().st_size].append(en)
-            #   filter entries with less than 2
             for sz, ls in hs.items():
                 if len(ls) < 2: continue
+                cnt_size += len(ls) - 1
                 #   separate into checksum identity
                 hc = defaultdict(list)
                 for es in ls:
                     cs = self.checksum(es)
                     if cs is None: continue
-                    #   check for checksum entry
                     hc[cs].append(es)
                 for cs, lc in hc.items():
                     if len(lc) < 2: continue
-                    hChecksum[cs] = lc[0].name()
+                    cnt_csum += len(lc) - 1
+                    cnt_byte += sz * (len(lc) - 1)
+                    self.hChecksumName[cs] = fn
+                    self.hChecksumSize[cs] = sz
                     dirs = list()
                     for ec in lc:
                         dir = dirname(ec.path())
-                        hDirChecksums[dir].add(cs)
+                        self.hDirChecksums[dir].add(cs)
                         dirs.append(dir)
-                    for n, dir in enumerate(sorted(dirs)):
-                        for dir2 in dirs[n + 1:]:
-                            hDirs[dir].add(dir2)
-
-        for dir1, others in hDirs.items():
-            s1 = hDirChecksums[dir1]
-            for dir2 in others:
-                s2 = hDirChecksums[dir2]
-                sc = s1 & s2
-                if not sc: continue
-                fs = tuple(hChecksum[cs] for cs in sc)
-                print(dir1, dir2)
-                print(*fs)
+                    for dirA in dirs:
+                        for dirB in dirs:
+                            if dirB != dirA and dirA not in self.hDirs[dirB]:
+                                self.hDirs[dirA].add(dirB)
 
 
-        return
 
-        for fn, fs in reg.items():
-            pp.proceed()
-            # more two or more files with same name
-            if len(fs) > 1:
-                cnt_name += len(fs) - 1
-                # check for same file size
-                hs = defaultdict(list)
-                for ef in fs:
-                    hs[ef.stat().st_size].append(ef)
-                for sz, ls in hs.items():
-                    if len(ls) > 1:
-                        cnt_size += len(ls) - 1
-                        cnt_byte += sz * len(ls)
-                        # check for same file checksum
-                        hh = defaultdict(list)
-                        for es in ls:
-                            hh[self.hash(es)].append(es)
-                        if None in hh: del hh[None]
-                        for lh in hh.values():
-                            if len(lh) > 1:
-                                cnt_hash += len(lh) - 1
-                                print(f'> {fn}', *(eh.path() for eh in lh), sep="\n- ")
 
-        print(f'name duplicates:{cnt_name:>6}')
-        print(f'size duplicates:{cnt_size:>6}')
-        print(f'hash duplicates:{cnt_hash:>6}')
-        print(f'bytes hashed   :{cnt_byte:>6}')
+        print()
+        self.dumpPkl(pkl)
 
-    def analyze(self, fp, *prefPaths):
-        """process text report"""
+        self.info('name duplicates', cnt_name)
+        self.info('size duplicates', cnt_size)
+        self.info('hash duplicates', cnt_csum)
+        self.info('duplicate size', humanbytes(cnt_byte))
+
+    def interact(self, pkl=None, preview=None):
+        """process scan data"""
         try:
-            with open(fp, 'r') as fh:
-                cont = fh.read()
+            pkl = self.pklName(pkl)
+            chkFile(pkl)
         except Exception as e:
             print(e)
+            return
 
-        rxPref = None
-
-        if prefPaths:
-            rxPref = re.compile(r'^(?:' + '|'.join(map(re.escape, prefPaths)) + r').*$')
-            print('pref:', rxPref.pattern)
-
-        def dirHash(dirs:tuple):
-            h = self.newhash()
-            for d in dirs: h.update(d.encode('utf-8'))
-            return h.hexdigest()
-
-        rxFile      = re.compile(r'^> (.+)((?:\n- .+)+)', re.M)
-        rxPaths     = re.compile(r'^- (.+)', re.M)
-        hDirFiles   = defaultdict(set)
-        hDirCombis  = dict()
-        reducedDirs = set()
-
-        for fn, cpaths in rxFile.findall(cont):
-            dirs = tuple(sorted(dirname(p) for p in rxPaths.findall(cpaths)))
-            hash = dirHash(dirs)
-            if hash not in hDirCombis:
-                hDirCombis[hash] = dirs
-            for dir in dirs:
-                hDirFiles[dir].add(fn)
-
-        def reduceCombi(choice:tuple, nKeep):
-            sk = choice[nKeep][1]
-            for n, (dir, files) in enumerate(choice):
-                if n != nKeep:
-                    common = sk & files
-                    for fn in common:
-                        fp = join(dir, fn)
-                        print('remove', fp )
-                    hDirFiles[dir] -= common
-                    reducedDirs.add(dir)
-
-        def askChoice(choice:tuple):
-            nKeep = None
-            while True:
-                print(f'Nr: {"files":<5}: in folder:')
-                for n, (dir, files) in enumerate(choice):
-                    print(f'{n+1:>2}: {len(files):>5}: {dir}')
-                print('select number to keep (enter: skip, x: exit): ', end='')
-                c = input()
-                if c.isdigit():
-                    n = int(c)
-                    if n > 0 and n <= len(choice):
-                        nKeep = n - 1
-                        break
-                    else: continue
-                elif c and c in 'xX':
-                    print('exit')
-                    exit()
-                else:
-                    print()
-                    break
-            return nKeep
-
-        def prefChoice(choice:tuple):
-            res = tuple(n for n, (dir, _) in enumerate(choice) if rxPref.match(dir))
-            return res[0] if len(res) == 1 else None
-
-            # for dir, files in choice:
-            #     print(len(hDirFiles[dir]), dir)
-
-
-        if rxPref:
-            procChoice = lambda choice: prefChoice(choice)
+        if preview:
+            rm = lambda *p : self.prevRm(*p)
         else:
-            procChoice = lambda choice: askChoice(choice)
+            rm = lambda *p : self.execRm(*p)
 
-        for combi in hDirCombis.values():
-            choice = tuple((dir, files) for dir, files in [(dir, hDirFiles[dir]) for dir in combi] if files)
-            if len(choice) > 1:
-                n = procChoice(choice)
-                if n is not None: reduceCombi(choice, n)
+        self.loadPkl(pkl)
 
-        for dir in sorted(reducedDirs):
-            files = hDirFiles[dir]
-            if len(files) > 0:
-                print(dir, *files)
+        chg = False
 
+        for dir1, others in sorted(self.hDirs.items()):
+            s1 = self.hDirChecksums[dir1]
+            for dir2 in others:
+                # print(dir1, '<->', dir2)
+                s2 = self.hDirChecksums[dir2]
+                sc = s1 & s2
+                if not sc: continue
+                fs = tuple(self.hChecksumName[cs] for cs in sc)
+                ts = sum(self.hChecksumSize[cs]  for cs in sc)
+                dirs = (dir1, dir2)
+                while True:
+                    print()
+                    print(len(fs), 'common files', humanbytes(ts))
+                    print(*fs)
+                    for n, dir in enumerate(dirs):
+                        print(f'{n+1}) {dir} ')
+                    print('select number to KEEP (enter: skip, q: quit): ', end='')
+                    nClear = None
+                    c = input()
+                    if c.isdigit():
+                        n = int(c)
+                        if n > 0 and n <= 2:
+                            nClear = n % 2
+                            break
+                        else: continue
+                    elif c and c in 'xXqQ':
+                        print('exit')
+                        return
+                    else:
+                        print()
+                        break
+                if nClear is not None:
+                    dc = dirs[nClear]
+                    self.hDirChecksums[dc] -= sc
+                    rm(dc, fs)
+                    chg = True
 
-        print('dirs  :', len(hDirFiles))
-        print('combis:', len(hDirCombis))
+        if chg and not preview:
+            self.dumpPkl(pkl)
 
 if __name__ == '__main__':
     from docopts import docopts, dochelp
@@ -259,8 +225,8 @@ if __name__ == '__main__':
     df = dupFind()
 
     if opts['s']:
-        df.scan(opts['s'], xglobFile=opts['f'])
-    elif opts['p']:
-        df.analyze(opts['p'], *args)
+        df.scan(*args, xglobFile=opts['g'], pkl=opts['b'])
+    elif opts['i']:
+        df.interact(*args, pkl=opts['b'], preview=opts['p'])
     else:
         dochelp(__doc__)

@@ -17,6 +17,8 @@ glob        regex
    <^   ->  ^
    <$   ->  $
 """
+from dirTools import chkFile
+from itertools import batched
 import re
 
 class XGlob():
@@ -51,6 +53,25 @@ class XGlob():
         cp = '|'.join([self.glob2p(c) for c in fl])
         cp = rf'(?:{cp})'
         return rf'^{cp}$' if anc else cp
+
+    @staticmethod
+    def f2h(fp:str):
+        """read xglob sections from file"""
+        chkFile(fp)
+        with open(fp, 'r') as fh:
+            #   multiple emty lines
+            txt = re.sub(r'\n{2,}', '\n',
+                    #   comments
+                    re.sub(r'^#.*', '',
+                        #   leading and tailing line spaces
+                        re.sub(r'(?:^ +| +$)', '',
+                                #   content without tabs
+                                fh.read().strip().replace("\t", ' '), flags=re.M),
+                        flags=re.M))
+            #   split into sections
+            items = re.split(r'^> *(.+)', txt, flags=re.M)[1:]
+            items = tuple((key, cont.strip()) for (key, cont) in batched(items, 2))
+            return {key.upper():tuple(cont.split("\n")) for (key, cont) in items if cont}
 
 if __name__ == '__main__':
 
