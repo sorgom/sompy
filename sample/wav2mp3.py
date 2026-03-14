@@ -25,7 +25,8 @@ if not: create folder, all files new
 """
 from collections import Counter
 from enum import Enum, auto
-from os import remove, makedirs, system, utime
+from os import remove, makedirs, utime
+from subprocess import run, DEVNULL
 from os.path import join, isdir, isfile
 from shutil import which, rmtree
 import re
@@ -103,8 +104,8 @@ class Wav2Mp3(MtBase):
 
     def w2m(self, feWav, mp3:str, s:ST):
         if isdir(mp3): rmtree(mp3)
-        res = system(f'{self.cmd} "{feWav.path()}" "{mp3}"')
-        if res == 0:
+        res = run(f'{self.cmd} "{feWav.path()}" "{mp3}"', stderr=DEVNULL, stdout=DEVNULL)
+        if res.returncode == 0:
             self.count(s)
             t = feWav.mtime()
             utime(mp3, (t, t))
@@ -159,10 +160,12 @@ class Wav2Mp3(MtBase):
                     pathMp3 = join(dirMp3, self.mp3Name(feWav))
                     self.process(feWav, pathMp3, self.ST.new)
 
+            self.finish()
+
             if self.outLimit():
                 break
 
-            self.finish()
+
         sw.stop()
         self.info('transfers', self.cnt.count())
         for n, c in [(n.value, n.name) for n in self.ST]:
