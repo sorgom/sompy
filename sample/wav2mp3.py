@@ -12,51 +12,15 @@ options
     -l  <int> limit of conversions per source / destination
     -t  <int> number of threads
     -h  this help
-
-algorithm:
-TODO: clean redundant mp3 folders:
-go through mp3
-if equivalent wav folder found:
-clean mp3 files without wav equivalent
-
-go through source folders, check target folders
-if exists, check source files: new or overwrite
-if not: create folder, all files new
 """
-from collections import Counter
-from enum import Enum, auto
-from os import remove, makedirs, utime
-from subprocess import run, DEVNULL
-from os.path import join, isdir, isfile
-from shutil import which, rmtree
-import re
-
 import sompy
-from ff import FF_Re
-from mtbase import MtBase
-from progress import ProgressNum
-from stopWatch import StopWatch
-from toType import toInt, toBool
+from convertBase import ConvertBase
 
-
-
-class Wav2Mp3(MtBase):
+class Wav2Mp3(ConvertBase):
     "the wav2mp3 class"
 
-    class ST(Enum):
-        "enumeration for statistics"
-        new = 0
-        replaced = auto()
-        removed = auto()
-        errors = auto()
-
     def __init__(self, quality=None, force=None, limit=None, clean=None, numThreads=None):
-        super().__init__(numThreads)
-        conv = 'lame'
-        lame = which(conv)
-        if lame is None:
-            print('no', conv, 'wav2mp3 found on PATH.')
-            exit(1)
+        super().__init__('lame', 'wav', 'mp3', force, limit, clean, numThreads)
         if quality:
             if quality in 'medium standard extreme insane 32 40 48 56 64 80 96 112 128 160 192 224 256 320':
                 pass
@@ -66,112 +30,7 @@ class Wav2Mp3(MtBase):
         else:
             quality = 'hifi'
 
-        self.cmd = f'{lame} --quiet --preset {quality}'
-
-
-        rx = re.compile(r'^(.*)\..*?$')
-        def mkMp3Name():
-            return lambda e : rx.sub(r'\1.mp3', e.name())
-
-        self.keyFunc = lambda c : rx.sub(r'\1', c)
-
-        self.mp3Name    = mkMp3Name()
-
-        self.force  = toBool(force)
-        self.limit  = max(0, toInt(limit)) if limit else None
-        self.clean  = toBool(clean)
-        self.cnt    = ProgressNum('transfer no.', 15, 12)
-
-        self.stats = Counter()
-
-        self.info('threads', self.numThreads())
-        self.info('limit', self.limit if self.limit else '--')
-        print()
-
-    def count(self, s:ST):
-        self.stats[s.value] += 1
-
-    def info(self, *args):
-        self.cnt.info(*args)
-
-    @staticmethod
-    def mDir(dir):
-        if isfile(dir): remove(dir)
-        makedirs(dir, exist_ok=True)
-
-    def outLimit(self):
-        return self.limit and self.cnt >= self.limit
-
-    def w2m(self, feWav, mp3:str, s:ST):
-        if isdir(mp3): rmtree(mp3)
-        res = run(f'{self.cmd} "{feWav.path()}" "{mp3}"', stderr=DEVNULL, stdout=DEVNULL)
-        if res.returncode == 0:
-            self.count(s)
-            t = feWav.mtime()
-            utime(mp3, (t, t))
-        else:
-            self.count(self.ST.errors)
-
-    def process(self, *work):
-        if self.outLimit(): return
-        self.cnt.proceed()
-        self.launch(self.w2m, *work)
-
-    def transfer(self, rootWav:str, rootMp3:str):
-        try:
-            ffWav = FF_Re(rootWav, r'^.*\.wav$', ignoreCase=True)
-            ffMp3 = FF_Re(rootMp3, r'^.*\.mp3$', ignoreCase=True)
-        except Exception as e:
-            print(e)
-            return
-
-        self.cnt.reset()
-        self.stats.clear()
-        sw = StopWatch()
-
-        self.launch(lambda : ffWav.update())
-        self.launch(lambda : ffMp3.update())
-        self.finish()
-
-
-        sw.stop()
-        self.info('scan', sw.str_ms())
-        self.info('wav', ffWav.dircnt())
-        self.info('mp3', ffMp3.dircnt())
-        print()
-
-        mapMp3 = ffMp3.genMap(self.keyFunc)
-
-        for deWav in ffWav:
-            dirMp3 = ffMp3.path(deWav)
-            mMp3   = mapMp3.get(deWav)
-            if mMp3:
-                for feWav in deWav.data:
-                    feMp3 = mMp3.get(feWav)
-                    if feMp3:
-                        if self.force or feWav.mtime() > feMp3.mtime():
-                            self.process(feWav, feMp3.path(), self.ST.replaced)
-                    else:
-                        pathMp3 = join(dirMp3, self.mp3Name(feWav))
-                        self.process(feWav, pathMp3, self.ST.new)
-            else:
-                self.mDir(dirMp3)
-                for feWav in deWav.data:
-                    pathMp3 = join(dirMp3, self.mp3Name(feWav))
-                    self.process(feWav, pathMp3, self.ST.new)
-
-            self.finish()
-
-            if self.outLimit():
-                break
-
-
-        sw.stop()
-        self.info('transfers', self.cnt.count())
-        for n, c in [(n.value, n.name) for n in self.ST]:
-            self.info(c, self.stats[n])
-        self.info('elapsed time', sw.str_sec())
-        self.info('average', sw.avrg_str_sec(self.cnt.count()))
+        self.cmd = f'{self.bin} --quiet --preset {quality}'
 
 if __name__ == '__main__':
     from docopts import docopts
