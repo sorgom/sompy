@@ -12,12 +12,12 @@ options:
     misc
         -h this help
 """
-import re
+from glob import iglob
 from math import sqrt
 from os import makedirs
 from os.path import basename, splitext, join, isfile, isdir, exists
 from PIL import Image, ExifTags
-from glob import iglob
+import re
 
 #   for apple / iphone heif images
 from pillow_heif import register_heif_opener
