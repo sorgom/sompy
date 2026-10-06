@@ -1,8 +1,6 @@
 """
-simple batch image resizer
-source.img -> source_123x456.jpg if same folder
-source.img -> source.jpg if different folder
-usage: this script [options] image files or folders
+simple batch image resize to subfolder
+usage: this script [options] folders
 options:
     target images size definitions:
         -x <int> pixels width
@@ -10,71 +8,74 @@ options:
         -a <float> total number of megapixels (width x height)
     other output definitions:
         -q <20 .. 100> jpeg output quality, default 50
-        -o <folder> output folder (if different than source folder)
+        -s <subfolder> output subfolder default: "_resized"
     misc
         -h this help
 """
 import re
 from math import sqrt
 from os import makedirs
-from os.path import dirname, basename, abspath, normpath, splitext, join, isabs
+from os.path import basename, splitext, join, isfile, isdir, exists
 from PIL import Image, ExifTags
+from glob import iglob
+
 #   for apple / iphone heif images
 from pillow_heif import register_heif_opener
+register_heif_opener()
 
 class IResize(object):
-    def __init__(self, width=None, height=None, area=None, folder=None, quality=None):
+    def __init__(self, width=None, height=None, area=None, subfolder=None, quality=None):
         self.param = None
-        self.folder = None
         self.quality = 50
         try:
             if width is not None:
                 self.param = int(width)
                 self.sizeFunc = self.sizeFromWidth
-                what = 'width'
             elif height is not None:
                 self.param = int(height)
                 self.sizeFunc = self.sizeFromHeight
-                what = 'height'
             elif area is not None:
                 self.param = 1000000 * float(area)
                 self.sizeFunc = self.sizeFromArea
-                what = 'area'
             else:
-                exit()
+                raise Exception('missing size option')
 
             if quality is not None:
                 self.quality = min(100, max(20, int(quality)))
 
-            if folder is not None:
-                self.folder = normpath(folder)
-                if isabs(self.folder):
-                    makedirs(self.folder, exist_ok=True)
-                    self.trgNameFunc = self.trgNameAbs
-                else:
-                    self.trgNameFunc = self.trgNameSub
+            self.subfolder = '_resized' if subfolder is None else subfolder
 
         except Exception as e:
-            exit()
+            exit(e)
 
-        print(what, self.param)
+        #   filter for formats that can be opened (read)
+        _ = '|'.join([ex[1:] for ex, f in Image.registered_extensions().items() if f in Image.OPEN])
+        self.rxImg = re.compile(rf'\.(?:{_})$', re.I)
 
-        self.rxDone = re.compile(r'^.*_\d+x\d+\.\w{1-4}$', re.I)
 
-    def process(self, srcs):
-        for src in srcs:
-            if self.rxDone.match(src):
-                continue
-            try:
-                with Image.open(src) as img:
-                    img = self.exifRotate(img)
-                    width, height = self.sizeFunc(img)
-                    trg = self.trgNameFunc(src, width, height)
-                    ni = img.resize((width, height))
-                    ni.save(trg, quality=self.quality)
-                    print('->', width, height, trg)
-            except Exception as e:
-                print(f'skipped: {src} ({e})')
+    def process(self, folder):
+        if not isdir(folder): return
+        sf  = join(folder, self.subfolder)
+        sfx = exists(sf)
+        if sfx and not isdir(sf): return
+
+        for f in iglob(join(folder, '*')):
+            if self.rxImg.search(f) and isfile(f):
+                try:
+                    with Image.open(f) as img:
+                        img = self.exifRotate(img)
+                        width, height = self.sizeFunc(img)
+                        tn, _ = splitext(basename(f))
+
+                        trg = join(sf, f'{tn}.jpg')
+                        ni = img.resize((width, height))
+                        if not sfx:
+                            makedirs(sf)
+                            sfx = True
+                        ni.save(trg, quality=self.quality)
+                        print('->', width, height, basename(trg))
+                except Exception as e:
+                    print(f'skipped: {f} ({e})')
 
     def sizeFromWidth(self, img):
         return self.param, int(self.param * img.height / img.width + 0.5)
@@ -85,20 +86,6 @@ class IResize(object):
         h = img.height
         r = sqrt(self.param / (w * h))
         return int(r * w + 0.5), int(r * h + 0.5)
-
-    def trgNameSub(self, src, width, height):
-        bnm, _ = splitext(basename(src))
-        dir = join(abspath(dirname(src)), self.folder)
-        makedirs(dir, exist_ok=True)
-        return join(dir, f'{bnm}.jpg')
-
-    def trgNameAbs(self, src, width, height):
-        dir = normpath(abspath(dirname(src)))
-        bnm, _ = splitext(basename(src))
-        if self.folder is None or self.folder == dir:
-            bnm = f'{bnm}_{width}x{height}'
-        else: dir = self.folder
-        return join(dir, f'{bnm}.jpg')
 
     @staticmethod
     def exifRotate(img):
@@ -127,7 +114,8 @@ if __name__ == '__main__':
         width=opts.get('x'),
         height=opts.get('y'),
         area=opts.get('a'),
-        folder=opts.get('o'),
+        subfolder=opts.get('s'),
         quality=opts.get('q')
     )
-    ir.process(fglob(args))
+    for arg in fglob(args):
+        ir.process(arg)
